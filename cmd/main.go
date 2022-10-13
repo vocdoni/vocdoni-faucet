@@ -1,18 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"go.vocdoni.io/dvote/crypto/ethereum"
 	"go.vocdoni.io/dvote/httprouter"
 	"go.vocdoni.io/dvote/log"
+	"go.vocdoni.io/vocdoni-faucet/api"
 	"go.vocdoni.io/vocdoni-faucet/config"
+	"go.vocdoni.io/vocdoni-faucet/faucet"
 	"go.vocdoni.io/vocdoni-faucet/internal"
 )
 
@@ -39,29 +39,6 @@ func main() {
 	}
 	log.Debugf("starting vocdoni-faucet version %s with config %s", internal.Version, cfg.String())
 
-	// setup signing key
-	var signer *ethereum.SignKeys
-	signer = ethereum.NewSignKeys()
-	// add signing private key if exist in configuration or flags
-	if len(cfg.SigningKey) != 32 {
-		log.Infof("adding custom signing key")
-		err := signer.AddHexKey(cfg.SigningKey)
-		if err != nil {
-			log.Fatalf("error adding hex key: (%s)", err)
-		}
-		pub, _ := signer.HexString()
-		log.Infof("using custom pubKey %s", pub)
-	} else {
-		log.Fatal("no private key or wrong key (size != 16 bytes)")
-	}
-	// add authorized keys for private methods
-	if cfg.API.AllowPrivate && cfg.API.AllowedAddrs != "" {
-		keys := strings.Split(cfg.API.AllowedAddrs, ",")
-		for _, key := range keys {
-			signer.AddAuthKey(ethcommon.HexToAddress(key))
-		}
-	}
-
 	// init proxy
 	var httpRouter httprouter.HTTProuter
 	httpRouter.TLSdomain = cfg.API.Ssl.Domain
@@ -70,11 +47,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// init evm faucet service if enabled
+	// init vocdoni faucet
+	v := faucet.NewVocdoni()
+	if cfg.Faucet.EnableVocdoni {
+		if err := v.Init(context.Background(), cfg.Faucet); err != nil {
+			log.Fatal(err)
+		}
+	}
 
-	// init vocdoni faucet service if enabled
+	// init evm faucet
+	e := faucet.NewEVM()
+	if cfg.Faucet.EnableEVM {
+		if err := e.Init(context.Background(), cfg.Faucet); err != nil {
+			log.Fatal(err)
+		}
+	}
 
-	// init REST API
+	// init api
+	a := api.NewAPI()
+	if err := a.Init(&httpRouter, cfg.API.Route, v, e); err != nil {
+		log.Fatal(err)
+	}
+	log.Infof("API available at %s", cfg.API.Route)
 
 	log.Info("startup complete")
 	// close if interrupt received
