@@ -6,6 +6,8 @@
 [![Join Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/4hKeArDaU2)
 [![Twitter Follow](https://img.shields.io/twitter/follow/vocdoni.svg?style=social&label=Follow)](https://twitter.com/vocdoni)
 
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg)](code-of-conduct.md) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 This repository contains the source code of the Vocdoni faucet.
 
 The Vocdoni faucet is a service for distributing Vocdoni and EVM based blockchains tokens, it exposes a REST API
@@ -13,27 +15,13 @@ for requesting such tokens.
 
 ## Build
 
-Compile from source in a golang environment (Go>1.18 required):
+Compile from source in a golang environment (Go>1.17 required):
 
 ```
 git clone https://go.vocdoni.io/vocdoni-faucet.git
 cd vocdoni-faucet
 go build ./cmd/main.go
 ```
-
-### Docker
-
-You can run go-vocdoni-faucet as a standalone container with a docker script (configuration options can be changed in file `config/env`):
-
-```
-dockerfiles/faucet.sh
-```
-
-All data will be stored in the shared volume `run`.
-
-
-
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v1.4%20adopted-ff69b4.svg)](code-of-conduct.md) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 ## Usage
 
