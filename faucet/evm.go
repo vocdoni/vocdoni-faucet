@@ -4,127 +4,199 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 	"time"
 
 	goethereum "github.com/ethereum/go-ethereum"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	evmcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
+	evmtypes "github.com/ethereum/go-ethereum/core/types"
+	evmClient "github.com/ethereum/go-ethereum/ethclient"
 	"go.vocdoni.io/dvote/crypto/ethereum"
-	chain "go.vocdoni.io/dvote/ethereum"
 	"go.vocdoni.io/dvote/log"
 	"go.vocdoni.io/vocdoni-faucet/config"
 )
 
-type TxOptions struct {
-	GasLimit,
-	TxCost,
-	Tip uint64
-	GasPrice *big.Int
-}
-
+// EVM contains all components required for the EVM faucet
 type EVM struct {
-	NetworkName,
-	NetworkID string
-	Amount    *big.Int
-	Endpoints []string
-	TxOptions *TxOptions
-	Client    *ethclient.Client
-	Signers   []*Signer
-	Timeout   time.Duration
+	// network one of the available EVM networks
+	network string
+	// chainID chainId/networkId of the network
+	chainID int
+	// amount of tokens to be transferred
+	amount uint64
+	// Endpoints to connect with
+	endpoints []string
+
+	// client client instance connected to an endpoint
+	client *evmClient.Client
+	// signers pool of signers
+	signers []*Signer
+	// timeout timeout for EVM network operations
+	timeout time.Duration
+	// sendConditions conditions to meet before sending faucet tokens
+	sendConditions *sendConditions
+	forTest        bool
+	testBackend    *evmTestBackend
 }
 
-type Signer struct {
-	SignKeys *ethereum.SignKeys
-	Taken    chan bool
+// NewEVM returns an EVM instance
+func NewEVM() *EVM {
+	return &EVM{}
 }
 
-// New creates a new Eth object initialized with the user config
-func New(ctx context.Context, evmConfig *config.FaucetConfig) (*EVM, error) {
-	evm := &EVM{}
-	// get chain specs
-	chainSpecs, err := chain.SpecsFor(evmConfig.EVMNetwork)
-	if err != nil {
-		return nil, err
+// Amount returns the amount for the faucet
+func (e *EVM) Amout() uint64 {
+	return e.amount
+}
+
+// Signers returns the signers of the faucet
+func (e *EVM) Signers() []*Signer {
+	return e.signers
+}
+
+func (e *EVM) setSendConditions(balance uint64, challenge bool) {
+	e.sendConditions = &sendConditions{
+		Balance:   balance,
+		Challenge: challenge,
 	}
-	evm.NetworkName = chainSpecs.Name
-	evm.NetworkID = strconv.Itoa(chainSpecs.NetworkId)
+}
+
+// SetAmount sets the amount for the faucet
+func (e *EVM) SetAmount(amount uint64) error {
+	if amount == 0 && amount == e.amount {
+		return ErrInvalidAmount
+	}
+	e.amount = amount
+	return nil
+}
+
+// SetEndpoints appends endpoints to the existing ones
+func (e *EVM) SetEndpoints(endpoints []string) error {
+	if len(endpoints) == 0 {
+		return ErrInvalidEndpoint
+	}
+	e.endpoints = make([]string, 0)
+	for _, endpoint := range endpoints {
+		if len(endpoint) == 0 {
+			return ErrInvalidEndpoint
+		}
+		e.endpoints = append(e.endpoints, endpoint)
+	}
+	return nil
+}
+
+// SetSigners append new signers to the existing ones
+func (e *EVM) SetSigners(signersPrivKeys []string) error {
+	if len(signersPrivKeys) == 0 {
+		return ErrInvalidSigner
+	}
+	signers := make([]*Signer, 0)
+	for _, key := range signersPrivKeys {
+		s := new(ethereum.SignKeys)
+		if err := s.AddHexKey(key); err != nil {
+			return fmt.Errorf("cannot import key: %w", err)
+		}
+		signers = append(signers, &Signer{SignKeys: s, Taken: make(chan bool, 1)})
+	}
+	e.signers = signers
+	return nil
+}
+
+// Init creates a new EVM faucet object initialized with the given config
+func (e *EVM) Init(ctx context.Context, evmConfig *config.FaucetConfig) error {
+	// get chain specs
+	chainSpecs, err := EVMSpecsFor(evmConfig.EVMNetwork)
+	if err != nil {
+		return err
+	}
+	e.network = chainSpecs.Name
+	e.chainID = chainSpecs.NetworkID
 
 	// check endpoints
-	for _, endpoint := range evmConfig.EVMEndpoints {
-		if len(endpoint) == 0 {
-			return nil, fmt.Errorf("invalid ethereum provider")
-		}
-	}
-	evm.Endpoints = make([]string, len(evm.Endpoints))
-	evm.Endpoints = append(evm.Endpoints, evmConfig.EVMEndpoints...)
-
-	// set default tx options
-	evm.TxOptions = &TxOptions{
-		GasLimit: evmConfig.EVMTxOptions.GasLimit,
-		GasPrice: evmConfig.EVMTxOptions.GasPrice,
-		Tip:      evmConfig.EVMTxOptions.Tip,
+	if err := e.SetEndpoints(evmConfig.EVMEndpoints); err != nil {
+		return fmt.Errorf("cannot set endpoints: %w", err)
 	}
 
 	// set amout to transfer
-	if evmConfig.Amount.Cmp(big.NewInt(0)) == 0 {
-		return nil, fmt.Errorf("invalid faucet amount")
+	if err := e.SetAmount(evmConfig.Amount); err != nil {
+		return ErrInvalidAmount
 	}
-	evm.Amount = evmConfig.Amount
 
 	// set signers
-	evm.Signers = make([]*Signer, len(evmConfig.EVMPrivKeys))
-	for _, key := range evmConfig.EVMPrivKeys {
-		s := new(ethereum.SignKeys)
-		if err := s.AddHexKey(key); err != nil {
-			return nil, fmt.Errorf("cannot import key: %w", err)
-		}
-		evm.Signers = append(evm.Signers, &Signer{SignKeys: s})
+	if err := e.SetSigners(evmConfig.EVMPrivKeys); err != nil {
+		return ErrInvalidSigner
 	}
 
 	// set default timeout for endpoint calls
-	evm.Timeout = evmConfig.EVMTimeout
+	if evmConfig.EVMTimeout == 0 {
+		return ErrInvalidTimeout
+	}
+	e.timeout = evmConfig.EVMTimeout
 
-	return evm, nil
+	// set send conditions
+	e.setSendConditions(evmConfig.SendConditions.Balance, evmConfig.SendConditions.Challenge)
+
+	return nil
 }
 
-// NewClient returns a working ethereum client connected to one of the faucet provided endpoints
-// Returns error any endpoint works
-func (e *EVM) NewClient(ctx context.Context) (*ethclient.Client, error) {
-	var networkID *big.Int
-	var client *ethclient.Client
+// NewClient returns a working ethereum client connected to one of the faucet provided endpoints,
+// returns error any endpoint works as expected
+func (e *EVM) NewClient(ctx context.Context) error {
+	e.client = &evmClient.Client{}
 	var err error
-	for _, endpoint := range e.Endpoints {
-		tctx, cancel := context.WithTimeout(ctx, e.Timeout)
+	for _, endpoint := range e.endpoints {
+		tctx, cancel := context.WithTimeout(ctx, e.timeout)
 		defer cancel()
-		client, err = ethclient.DialContext(tctx, endpoint)
+		e.client, err = evmClient.DialContext(tctx, endpoint)
 		if err != nil {
 			log.Warnf("cannot connect to %s with error %s", endpoint, err)
 			continue
 		}
-		tctx2, cancel2 := context.WithTimeout(ctx, e.Timeout)
-		defer cancel2()
-		networkID, err = client.ChainID(tctx2)
+		chainID, err := e.ClientChainID(ctx)
 		if err != nil {
 			log.Warnf("cannot get info from endpoint %s with err %s", endpoint, err)
 			continue
 		}
-		if networkID.String() != e.NetworkID {
-			log.Warnf("got networkID %s but %s is expected, skipping endpoint", networkID.String(), e.NetworkID)
+		// check network
+		if chainID.Int64() != int64(e.chainID) {
+			log.Warnf("got networkID %s but %s is expected, skipping endpoint", chainID.String(), e.network)
+			continue
 		}
-		return client, nil
+		return nil
 	}
-	return nil, fmt.Errorf("no working endpoint found")
+	return ErrInvalidEndpoint
 }
 
-func checkTxStatus(
-	txHash *ethcommon.Hash,
-	ethclient *ethclient.Client,
-	timeout time.Duration) (uint64, error) {
-	tctx, cancel := context.WithTimeout(context.Background(), timeout)
+// ClientChainID returns the chainID that the client reports
+// from the connected node
+func (e *EVM) ClientBalanceAt(ctx context.Context,
+	address evmcommon.Address,
+	blockNumber *big.Int) (*big.Int, error) {
+	return e.balanceAt(ctx, address, blockNumber)
+}
+
+// ClientChainID returns the chainID that the client reports
+// from the connected node
+func (e *EVM) ClientChainID(ctx context.Context) (*big.Int, error) {
+	if e.forTest {
+		return e.testBackend.Backend.Blockchain().Config().ChainID, nil
+	}
+	tctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
-	receipt, err := ethclient.TransactionReceipt(tctx, *txHash)
+	return e.client.ChainID(tctx)
+}
+
+func (e *EVM) checkTxStatus(txHash *evmcommon.Hash) (uint64, error) {
+	tctx, cancel := context.WithTimeout(context.Background(), e.timeout)
+	defer cancel()
+	var receipt *evmtypes.Receipt
+	var err error
+	if e.forTest {
+		receipt, err = e.testBackend.Backend.TransactionReceipt(tctx, *txHash)
+	} else {
+		receipt, err = e.client.TransactionReceipt(tctx, *txHash)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -134,190 +206,135 @@ func checkTxStatus(
 	return receipt.Status, nil
 }
 
-// send tokens and returns the hash of the tx
-func (s *Signer) sendTokens(ctx context.Context,
-	networkName string,
-	ethclient *ethclient.Client,
-	timeout time.Duration,
-	txOptions *TxOptions,
-	to ethcommon.Address,
-	amount *big.Int) (*ethcommon.Hash, uint64, error) {
-	// set gas price
-	var err error
-	// var gasPrice = big.NewInt(60000000000) // 60 gwei
-	switch networkName {
-	case "sokol":
-		//gasPrice = big.NewInt(1000000000) // 10 gwei
-	default:
-		//tctx2, cancel2 := context.WithTimeout(ctx, timeout)
-		//defer cancel2()
-		//gasPrice, err = ethclient.SuggestGasPrice(tctx2)
-		//if err != nil {
-		log.Warn("Could not estimate gas price, using default value of 60gwei")
-		//}
-	}
+// sendTokens send tokens and returns the hash of the tx
+func (e *EVM) sendTokens(ctx context.Context, to evmcommon.Address, signerIndex int) (*evmcommon.Hash, error) {
 	// get nonce for the signer
-	tctx2, cancel2 := context.WithTimeout(ctx, timeout)
-	defer cancel2()
-	nonce, err := ethclient.PendingNonceAt(tctx2, s.SignKeys.Address())
+	tctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+	var nonce uint64
+	var err error
+	var gasPrice, maxPriorityFeePerGas *big.Int
+	if e.forTest {
+		nonce, err = e.testBackend.Backend.PendingNonceAt(tctx, e.signers[signerIndex].SignKeys.Address())
+		if err != nil {
+			return nil, fmt.Errorf("error creating tx: %s", err)
+		}
+		gasPrice, err = e.testBackend.Backend.SuggestGasPrice(tctx)
+		if err != nil {
+			return nil, fmt.Errorf("error creating tx: %s", err)
+		}
+		maxPriorityFeePerGas, err = e.testBackend.Backend.SuggestGasTipCap(tctx)
+		if err != nil {
+			return nil, fmt.Errorf("error creating tx: %s", err)
+		}
+	} else {
+		nonce, err = e.client.PendingNonceAt(tctx, e.signers[signerIndex].SignKeys.Address())
+		if err != nil {
+			return nil, fmt.Errorf("error creating tx: %s", err)
+		}
+		gasPrice, err = e.client.SuggestGasPrice(tctx)
+		if err != nil {
+			return nil, fmt.Errorf("error creating tx: %s", err)
+		}
+		maxPriorityFeePerGas, err = e.client.SuggestGasTipCap(tctx)
+		if err != nil {
+			return nil, fmt.Errorf("error creating tx: %s", err)
+		}
+	}
 	if err != nil {
-		return nil, 0, fmt.Errorf("cannot get signer account nonce: %s", err)
+		return nil, fmt.Errorf("cannot get signer account nonce: %s", err)
 	}
 	// create tx
-	tx := ethtypes.NewTransaction(nonce, to, amount, txOptions.GasLimit, txOptions.GasPrice, nil)
+	tx := evmtypes.NewTx(&evmtypes.DynamicFeeTx{
+		ChainID:   big.NewInt(int64(e.chainID)),
+		Nonce:     nonce,
+		GasFeeCap: gasPrice,
+		GasTipCap: maxPriorityFeePerGas,
+		Gas:       uint64(21000), // enough for standard eth transfers
+		To:        &to,
+		Value:     big.NewInt(int64(e.amount)),
+	})
 	// sign tx
-	tctx3, cancel3 := context.WithTimeout(ctx, timeout)
-	defer cancel3()
-	networkId, err := ethclient.NetworkID(tctx3)
+	signedTx, err := evmtypes.SignTx(tx, evmtypes.NewLondonSigner(big.NewInt(int64(e.chainID))), &e.signers[signerIndex].SignKeys.Private)
 	if err != nil {
-		return nil, 0, fmt.Errorf("cannot get networkId: %w", err)
-	}
-	signedTx, err := ethtypes.SignTx(tx, ethtypes.NewEIP155Signer(networkId), &s.SignKeys.Private)
-	if err != nil {
-		return nil, 0, fmt.Errorf("cannot sign transaction: %s", err)
+		return nil, fmt.Errorf("cannot sign transaction: %s", err)
 	}
 	// send tx
-	tctx4, cancel4 := context.WithTimeout(ctx, timeout)
-	defer cancel4()
-	err = ethclient.SendTransaction(tctx4, signedTx)
+	tctx2, cancel2 := context.WithTimeout(ctx, e.timeout)
+	defer cancel2()
+	if e.forTest {
+		err = e.testBackend.Backend.SendTransaction(tctx2, signedTx)
+	} else {
+		err = e.client.SendTransaction(tctx2, signedTx)
+	}
+
 	if err != nil {
-		return nil, 0, fmt.Errorf("cannot send signed tx: %s", err)
+		return nil, fmt.Errorf("cannot send signed tx: %s", err)
 	}
 	log.Infof("sending %d tokens to newly created entity %s from signer: %s. TxHash: %s and Nonce: %d",
-		amount,
+		e.amount,
 		to.String(),
-		s.SignKeys.AddressString(),
+		e.signers[signerIndex].SignKeys.AddressString(),
 		signedTx.Hash().Hex(),
 		signedTx.Nonce(),
 	)
-	nHash := new(ethcommon.Hash)
+	nHash := new(evmcommon.Hash)
 	*nHash = signedTx.Hash()
-	return nHash, signedTx.Nonce(), nil
+	return nHash, nil
 }
 
-func (s *Signer) checkEnoughBalance(ctx context.Context,
-	defaultAmount *big.Int,
-	ethclient *ethclient.Client,
-	timeout time.Duration) (bool, error) {
-	// Check manager has enough balance for the transfer
-	tctx1, cancel1 := context.WithTimeout(ctx, timeout)
-	defer cancel1()
-	fromBalance, err := ethclient.BalanceAt(tctx1, s.SignKeys.Address(), nil) // nil means latest block
-	if err != nil {
-		return false, fmt.Errorf("cannot check manager balance")
+// SendTokens sends an amount to an address if the address meets the send conditions
+func (e *EVM) SendTokens(ctx context.Context, to evmcommon.Address) (*evmcommon.Hash, error) {
+	if e.client == nil && !e.forTest {
+		return nil, fmt.Errorf("cannot send tokens, invalid Ethereum client")
 	}
-	var value *big.Int
-	var amount int64
-	if amount == 0 {
-		value = defaultAmount
-	} else {
-		value = big.NewInt(amount)
-	}
-	if fromBalance.CmpAbs(value) == -1 {
-		return false, fmt.Errorf("wallet does not have enough balance: %d", fromBalance.Int64())
-	}
-	return true, nil
-}
 
-func (eth *Eth) Close() {
-	eth.client.Close()
-}
-
-func (eth *Eth) BalanceAt(ctx context.Context,
-	address ethcommon.Address,
-	blockNumber *big.Int) (*big.Int, error) {
-	tctx, cancel := context.WithTimeout(ctx, eth.timeout)
+	// check to address meet sendConditions
+	tctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
-	return eth.client.BalanceAt(tctx, address, blockNumber) // nil means latest block
-}
-
-// SendTokens sends gas to an address
-// if the destination address has balance higher than maxAcceptedBalance the gas is not sent
-// if the amount provided is 0 the the default amount of gas is used
-func (eth *Eth) SendTokens(ctx context.Context,
-	to ethcommon.Address,
-	maxAcceptedBalance int64,
-	amount int64) (*big.Int, error) {
-	sent := &big.Int{}
-	if eth.client == nil {
-		return sent, fmt.Errorf("cannot send tokens, ethereum client is nil")
-	}
-	// Check to address does not exceed maxAcceptedBalance
-	tctx, cancel := context.WithTimeout(ctx, eth.timeout)
-	defer cancel()
-	toBalance, err := eth.BalanceAt(tctx, to, nil) // nil means latest block
+	toBalance, err := e.balanceAt(tctx, to, nil) // nil means latest block
 	if err != nil {
-		return sent, fmt.Errorf("cannot check entity balance")
+		return nil, fmt.Errorf("cannot check entity balance")
 	}
-	if toBalance.CmpAbs(big.NewInt(maxAcceptedBalance)) == 1 {
-		return sent, fmt.Errorf("entity %s has already a balance of : %d, greater than the maxAcceptedBalance",
+	if !e.sendConditions.basicBalanceCheck(toBalance.Uint64()) {
+		return nil, fmt.Errorf("%s has already a balance of: %d, greater than the sendConditions",
 			to.String(),
 			toBalance.Int64(),
 		)
 	}
-	finished := false
-	// get available signer
 
+	var finished bool
+	var txHash *evmcommon.Hash
+	var nonce uint64
 	for {
-		for _, signer := range eth.SignersPool {
+		// run until signer available
+		for signerIndex, signer := range e.signers {
 			select {
 			case signer.Taken <- true:
 			default:
+				// if signer is waiting for a tx select the next one
 				log.Debugf("signer %s has a pending tx",
 					signer.SignKeys.AddressString())
 				continue
 			}
-			// check all signer pending txs
+			// send tokens
 			log.Debugf("using signer %s", signer.SignKeys.AddressString())
-			tctx2, cancel2 := context.WithTimeout(ctx, eth.timeout)
+			tctx2, cancel2 := context.WithTimeout(ctx, e.timeout)
 			defer cancel2()
-			// if signer has not enough balance or error checking it select the next one
-			isEnough, err := signer.checkEnoughBalance(tctx2, eth.DefaultFaucetAmount, eth.client, eth.timeout)
+			txHash, err = e.sendTokens(tctx2, to, signerIndex)
 			if err != nil {
-				log.Infof("cannot check signer: %s balance with error: %s", signer.SignKeys.Address().Hex(), err)
+				log.Warnf("cannot send tx %s", txHash.Hex())
 				<-signer.Taken
-				continue
-			}
-			if !isEnough {
-				log.Infof("signer %s have not enough balance", signer.SignKeys.Address().Hex())
-				<-signer.Taken
-				continue
-			}
-			// send tx
-			tctx3, cancel3 := context.WithTimeout(ctx, eth.timeout)
-			defer cancel3()
-			var value *big.Int
-			if amount == 0 {
-				value = eth.DefaultFaucetAmount
-			} else {
-				value = big.NewInt(amount)
-			}
-			txHash, nonce, err := signer.sendTokens(tctx3,
-				eth.networkName,
-				eth.client,
-				eth.timeout,
-				eth.gasLimit,
-				to,
-				value,
-			)
-			if err != nil {
-				if txHash == nil {
-					log.Warnf("cannot send tx to %s with  signer %s : %s", to.Hex(), signer.SignKeys.Address().Hex(), err.Error())
-
-				} else {
-					log.Warnf("cannot send tx %s with signer %s : %s", txHash.Hex(), signer.SignKeys.Address().Hex(), err.Error())
-				}
-				<-signer.Taken
-				continue
+				finished = true
+				break
 			}
 			// add pending tx
-			log.Infof("signer %s txhash: %s with nonce: %d sended successfully",
+			log.Infof("signer %s tx: %s with nonce: %d successfully sent",
 				signer.SignKeys.Address().Hex(),
 				txHash.String(),
 				nonce,
 			)
-			log.Debugf("added pending tx to signer: %s", signer.SignKeys.AddressString())
-			go signer.waitForTx(eth.client, eth.timeout*2, txHash)
+			go e.waitForTx(txHash, signerIndex)
 			finished = true
 			break
 		}
@@ -327,41 +344,95 @@ func (eth *Eth) SendTokens(ctx context.Context,
 		}
 		time.Sleep(time.Second * 5)
 	}
-	return eth.DefaultFaucetAmount, nil
+	return txHash, nil
 }
 
-func (s *Signer) waitForTx(ethclient *ethclient.Client,
-	timeout time.Duration, txHash *ethcommon.Hash) {
-	// try get transaction receipt
-	// if not found wait
-	// if not found after waiting free the signer
-	log.Debugf("waiting tx for signer: %s", s.SignKeys.AddressString())
-	var status uint64
-	var err error
+func (e *EVM) waitForTx(txHash *evmcommon.Hash, signerIndex int) {
+	// wait until tx status is available, means tx is already mined
 	for {
-		status, err = checkTxStatus(txHash, ethclient, timeout)
+		status, err := e.checkTxStatus(txHash)
 		if err != nil {
 			if err == goethereum.NotFound {
-				// TODO: find a better way than polling
-				time.Sleep(time.Second * 5) // wait before checking again
+				// wait and check again
+				time.Sleep(time.Second * 10)
 				continue
-			} else {
-				log.Warnf("cannot check signer: %s tx hash %s status with err: %s",
-					s.SignKeys.Address().Hex(),
-					txHash.Hex(),
-					err,
-				)
-				break
 			}
-		} else {
-			log.Debugf("tx %s status is: %d", txHash.Hex(), status)
-			if status == 0 {
-				log.Warnf("signer %s tx %s failed on execution", s.SignKeys.Address().Hex(), txHash.Hex())
-			} else {
-				log.Infof("signer %s tx %s succesfully executed", s.SignKeys.Address().Hex(), txHash.Hex())
-			}
+			log.Warnf("cannot checktx hash %s status with err: %s", txHash.Hex(), err)
 			break
 		}
+		log.Debugf("tx %s status is: %d", txHash.Hex(), status)
+		if status == 0 {
+			log.Warnf("tx %s failed", txHash.Hex())
+			break
+		}
+		log.Infof("tx %s mined", txHash.Hex())
+		break
 	}
-	<-s.Taken
+	<-e.signers[signerIndex].Taken
+}
+
+func (e *EVM) balanceAt(ctx context.Context,
+	address evmcommon.Address,
+	blockNumber *big.Int) (*big.Int, error) {
+	tctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+	if e.forTest {
+		return e.testBackend.Backend.BalanceAt(tctx, address, blockNumber) // nil means latest block
+	}
+	return e.client.BalanceAt(tctx, address, blockNumber) // nil means latest block
+
+}
+
+// FOR TESTING PURPOSES
+
+// InitForTest inits an EVM instance with a simulated evm backend
+func (e *EVM) InitForTest(ctx context.Context, evmConfig *config.FaucetConfig) error {
+	if err := e.Init(ctx, evmConfig); err != nil {
+		return err
+	}
+	e.testBackend = &evmTestBackend{
+		PrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+	}
+	if err := e.testBackend.new(); err != nil {
+		return err
+	}
+	e.forTest = true
+	return nil
+}
+
+// TestBackend returns the simulated evm backend
+func (e *EVM) TestBackend() *evmTestBackend {
+	return e.testBackend
+}
+
+type evmTestBackend struct {
+	PrivKey string
+	Backend *backends.SimulatedBackend
+}
+
+func (eb *evmTestBackend) new() error {
+	signKey := ethereum.NewSignKeys()
+	if err := signKey.AddHexKey(eb.PrivKey); err != nil {
+		// ignore error and generate a random one
+		fmt.Printf("private key not found or err %s, generating a random one", err)
+		if err := signKey.Generate(); err != nil {
+			return err
+		}
+	}
+	balance := new(big.Int)
+	balance.SetString("10000000000000000000", 10) // 10 eth in wei
+	genesisAlloc := map[evmcommon.Address]core.GenesisAccount{
+		signKey.Address(): {
+			Balance: balance,
+		},
+	}
+	blockGasLimit := uint64(4712388)
+	eb.Backend = backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
+	eb.Commit()
+	return nil
+}
+
+// Commit saves the simulated backend state (new block)
+func (eb *evmTestBackend) Commit() {
+	eb.Backend.Commit()
 }
