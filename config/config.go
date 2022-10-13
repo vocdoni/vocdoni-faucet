@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"math/big"
 	"os"
 	"strings"
 	"time"
@@ -13,61 +12,70 @@ import (
 	vocdoniConfig "go.vocdoni.io/dvote/config"
 )
 
+// LogConfig logging configuration
 type LogConfig struct {
 	Level,
 	Output,
 	ErrorFile string
 }
 
-type FaucetTxOptions struct {
-	GasLimit,
-	TxCost,
-	Tip uint64
-	GasPrice *big.Int
-}
-
+// FaucetConfig faucet configuration
 type FaucetConfig struct {
-	Amount *big.Int
+	EnableEVM,
+	EnableVocdoni bool
+	// Amount to send by the faucet
+	Amount uint64
+	// EVM network name to connect with.
+	// Accepted one of SupportedFaucetNetworksMap
 	EVMNetwork,
-	VocdoniNetwork string
-	EVMTxOptions,
-	VocdoniTxOptions *FaucetTxOptions
+	// Vocdoni network name to connect with.
+	// Accepted one of SupportedFaucetNetworksMap
+	VocdoniNetwork,
+	// VocdoniPrivKey Vocdoni faucet signer key
+	VocdoniPrivKey string
+	// EVMPrivKeys EVM faucet signers keys
 	EVMPrivKeys,
-	VocdoniPrivKeys,
-	EVMEndpoints,
-	VocdoniEndpoints []string
-	EVMTimeout,
-	VocdoniTimeout time.Duration
+	// EVMEndpoints endpoints to connect the EVM faucet with
+	EVMEndpoints []string
+	// EVMTimeout faucet global timeout for EVM operations in seconds
+	EVMTimeout time.Duration
+	// SendConditions config for sendConditions
+	SendConditions SendConditionsConfig
 }
 
-type MetricsConfig struct {
-	Enable          bool
-	RefreshInterval int
+// SendConditionsConfig represents the send conditions of the faucet configuration
+type SendConditionsConfig struct {
+	Balance   uint64
+	Challenge bool
 }
 
+// Config the global configuration of the faucet
 type Config struct {
-	DataDir, SigningKey string
-	Save                bool
-	Log                 *LogConfig
-	Faucet              *FaucetConfig
-	API                 *vocdoniConfig.API
-	Metrics             *MetricsConfig
+	// DataDir base directory to store data
+	DataDir string
+	// Save save the config if true
+	Save   bool
+	Log    *LogConfig
+	Faucet *FaucetConfig
+	API    *vocdoniConfig.API
 }
 
+// NewConfig returns a pointer to an initialized Config
 func NewConfig() *Config {
 	return &Config{
-		Log:     new(LogConfig),
-		Faucet:  new(FaucetConfig),
-		API:     new(vocdoniConfig.API),
-		Metrics: new(MetricsConfig),
+		Log:    new(LogConfig),
+		Faucet: new(FaucetConfig),
+		API:    new(vocdoniConfig.API),
 	}
 }
 
+// Strings returns the configuration as a string
 func (cfg *Config) String() string {
-	return fmt.Sprintf("DataDir: %s, SigningKey: %s, Save: %v, Log: %+v, Faucet: %+v, API: %+v, Metrics: %+v",
-		cfg.DataDir, cfg.SigningKey, cfg.Save, cfg.Log, cfg.Faucet, cfg.API, cfg.Metrics)
+	return fmt.Sprintf("DataDir: %s, Save: %v, Log: %+v, Faucet: %+v, API: %+v",
+		cfg.DataDir, cfg.Save, cfg.Log, cfg.Faucet, cfg.API)
 }
 
+// InitConfig initializes the Config with user provided args
 func (cfg *Config) InitConfig() error {
 	// get $HOME
 	home, err := os.UserHomeDir()
@@ -84,31 +92,28 @@ func (cfg *Config) InitConfig() error {
 	pflag.StringVar(&cfg.DataDir, "dataDir", home+"/.faucet", "directory where data is stored")
 	cfg.Save = *pflag.Bool("saveConfig", false,
 		"overwrites an existing config file with the CLI provided flags")
-	cfg.SigningKey = *pflag.String("signingPrivKey", "",
-		"signing private key (if not specified, a new one will be created)")
-	// metrics
-	cfg.Metrics.Enable = *pflag.Bool("enableMetrics", true, "enable prometheus metrics")
-	cfg.Metrics.RefreshInterval =
-		*pflag.Int("metricsRefreshInterval", 10, "metrics refresh interval in seconds")
 	//faucet
+	cfg.Faucet.EnableEVM = *pflag.Bool("enableEVM", true, "enable evm faucet")
+	cfg.Faucet.EnableVocdoni = *pflag.Bool("enableVocdoni", true, "enable vocdoni faucet")
 	cfg.Faucet.EVMPrivKeys = *pflag.StringArray("evmPrivKeys", []string{},
 		"hexString privKeys for EVM faucet accounts")
-	cfg.Faucet.VocdoniPrivKeys = *pflag.StringArray("vocdoniPrivKeys",
-		[]string{}, "hexString privKeys for Vocdoni faucet accounts")
+	cfg.Faucet.VocdoniPrivKey = *pflag.String("vocdoniPrivKey",
+		"", "hexString privKeys for vocdoni faucet accounts")
 	cfg.Faucet.EVMEndpoints = *pflag.StringArray("evmEndpoints", []string{},
 		"evm endpoints to connect with (requied for the evm faucet)")
-	cfg.Faucet.VocdoniEndpoints = *pflag.StringArray("vocdoniEndpoints",
-		[]string{}, "vocdoni endpoints to connect with (requied for the vocdoni faucet)")
+	cfg.Faucet.EVMNetwork = *pflag.String("evmNetwork",
+		"", "one of the available evm chains")
+	cfg.Faucet.VocdoniNetwork = *pflag.String("vocdoniNetwork",
+		"", "one of the available vocdoni networks")
+	cfg.Faucet.Amount = *pflag.Uint64("faucetAmount", 100, "faucet amount")
+	cfg.Faucet.SendConditions.Balance = *pflag.Uint64("faucetAmountThreshold", 100, "minimum amount threshold for transfer")
+	cfg.Faucet.SendConditions.Challenge = *pflag.Bool("faucetEnableChallenge", false, "if true a faucet challenge must be solved")
 	// api
 	cfg.API.Route = *pflag.String("apiRoute", "/", "dvote API route")
 	cfg.API.ListenHost = *pflag.String("apiListenHost", "0.0.0.0", "API endpoint listen address")
 	cfg.API.ListenPort = *pflag.Int("apiListenPort", 8000, "API endpoint http port")
 	cfg.API.Ssl.Domain = *pflag.String("apiSSLDomain", "",
 		"enable TLS secure API domain with LetsEncrypt auto-generated certificate")
-	cfg.API.AllowPrivate = *pflag.Bool("apiAllowPrivate", false,
-		"allows private methods over the APIs")
-	cfg.API.AllowedAddrs = *pflag.String("apiAllowedAddrs", "",
-		"comma-delimited list of allowed client ETH addresses for private methods")
 	// parse flags
 	pflag.Parse()
 
@@ -128,21 +133,21 @@ func (cfg *Config) InitConfig() error {
 	viper.BindPFlag("logOutput", pflag.Lookup("logOutput"))
 	// common
 	viper.BindPFlag("dataDir", pflag.Lookup("dataDir"))
-	viper.BindPFlag("signingKey", pflag.Lookup("signingPrivKey"))
-	// metrics
-	viper.BindPFlag("metrics.Enable", pflag.Lookup("enableMetrics"))
-	viper.BindPFlag("metrics.RefreshInterval", pflag.Lookup("metricsRefreshInterval"))
 	// faucet
+	viper.BindPFlag("faucet.EnableEVM", pflag.Lookup("enableEVM"))
+	viper.BindPFlag("faucet.EnableVocdoni", pflag.Lookup("enableVocdoni"))
 	viper.BindPFlag("faucet.EVMPrivKeys", pflag.Lookup("evmPrivKeys"))
-	viper.BindPFlag("faucet.VocdoniPrivKeys", pflag.Lookup("vocdoniPrivKeys"))
+	viper.BindPFlag("faucet.VocdoniPrivKey", pflag.Lookup("vocdoniPrivKey"))
 	viper.BindPFlag("faucet.EVMEndpoints", pflag.Lookup("evmEndpoints"))
-	viper.BindPFlag("faucet.VocdoniEndpoints", pflag.Lookup("vocdoniEndpoints"))
+	viper.BindPFlag("faucet.EVMNetwork", pflag.Lookup("evmNetwork"))
+	viper.BindPFlag("faucet.VocdoniNetwork", pflag.Lookup("vocdoniNetwork"))
+	viper.BindPFlag("faucet.Amount", pflag.Lookup("faucetAmount"))
+	viper.BindPFlag("faucet.SendConditions.Balance", pflag.Lookup("faucetAmountThreshold"))
+	viper.BindPFlag("faucet.SendConditions.Challenge", pflag.Lookup("faucetEnableChallenge"))
 	// api
 	viper.BindPFlag("api.Route", pflag.Lookup("apiRoute"))
 	viper.BindPFlag("api.ListenHost", pflag.Lookup("listenHost"))
 	viper.BindPFlag("api.ListenPort", pflag.Lookup("listenPort"))
-	viper.BindPFlag("api.AllowPrivate", pflag.Lookup("apiAllowPrivate"))
-	viper.BindPFlag("api.AllowedAddrs", pflag.Lookup("apiAllowedAddrs"))
 	viper.Set("api.Ssl.DirCert", cfg.DataDir+"/tls")
 	viper.BindPFlag("api.Ssl.Domain", pflag.Lookup("apiSSLDomain"))
 
