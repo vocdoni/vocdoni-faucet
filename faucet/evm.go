@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	goethereum "github.com/ethereum/go-ethereum"
@@ -38,6 +39,7 @@ type EVM struct {
 	sendConditions *sendConditions
 	forTest        bool
 	testBackend    *evmTestBackend
+	lock           sync.RWMutex
 }
 
 // NewEVM returns an EVM instance
@@ -47,15 +49,21 @@ func NewEVM() *EVM {
 
 // Amount returns the amount for the faucet
 func (e *EVM) Amout() uint64 {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 	return e.amount
 }
 
 // Signers returns the signers of the faucet
 func (e *EVM) Signers() []*Signer {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
 	return e.signers
 }
 
 func (e *EVM) setSendConditions(balance uint64, challenge bool) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	e.sendConditions = &sendConditions{
 		Balance:   balance,
 		Challenge: challenge,
@@ -64,6 +72,8 @@ func (e *EVM) setSendConditions(balance uint64, challenge bool) {
 
 // SetAmount sets the amount for the faucet
 func (e *EVM) SetAmount(amount uint64) error {
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	if amount == 0 && amount == e.amount {
 		return ErrInvalidAmount
 	}
@@ -76,6 +86,8 @@ func (e *EVM) SetEndpoints(endpoints []string) error {
 	if len(endpoints) == 0 {
 		return ErrInvalidEndpoint
 	}
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	e.endpoints = make([]string, 0)
 	for _, endpoint := range endpoints {
 		if len(endpoint) == 0 {
@@ -91,6 +103,8 @@ func (e *EVM) SetSigners(signersPrivKeys []string) error {
 	if len(signersPrivKeys) == 0 {
 		return ErrInvalidSigner
 	}
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	signers := make([]*Signer, 0)
 	for _, key := range signersPrivKeys {
 		s := new(ethereum.SignKeys)
@@ -368,6 +382,8 @@ func (e *EVM) waitForTx(txHash *evmcommon.Hash, signerIndex int) {
 		log.Infof("tx %s mined", txHash.Hex())
 		break
 	}
+	e.lock.Lock()
+	defer e.lock.Unlock()
 	<-e.signers[signerIndex].Taken
 }
 
