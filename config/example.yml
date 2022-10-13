@@ -1,0 +1,21 @@
+api:
+    route: /
+    ssl:
+        dircert: /home/me/.faucet/tls
+        domain: ""
+datadir: /home/me/.faucet
+faucet:
+    amount: "100"
+    enableevm: true
+    enablevocdoni: true
+    evmendpoints: []
+    evmnetwork: ""
+    evmprivkeys: []
+    sendconditions:
+        balance: "100"
+        challenge: false
+    vocdoninetwork: ""
+    vocdoniprivkey: ""
+logerrorfile: ""
+loglevel: info
+logoutput: stdout
