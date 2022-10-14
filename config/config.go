@@ -23,8 +23,10 @@ type LogConfig struct {
 type FaucetConfig struct {
 	EnableEVM,
 	EnableVocdoni bool
-	// Amount to send by the faucet
-	Amount uint64
+	// EVMAmount evm amount to send by the faucet
+	EVMAmount,
+	// VocdoniAmount vocdoni amount to send by the faucet
+	VocdoniAmount uint64
 	// EVM network name to connect with.
 	// Accepted one of SupportedFaucetNetworksMap
 	EVMNetwork,
@@ -105,7 +107,8 @@ func (cfg *Config) InitConfig() error {
 		"", "one of the available evm chains")
 	cfg.Faucet.VocdoniNetwork = *pflag.String("vocdoniNetwork",
 		"", "one of the available vocdoni networks")
-	cfg.Faucet.Amount = *pflag.Uint64("faucetAmount", 100, "faucet amount")
+	cfg.Faucet.EVMAmount = *pflag.Uint64("faucetEVMAmount", 1, "evm faucet amount")
+	cfg.Faucet.VocdoniAmount = *pflag.Uint64("faucetVocdoniAmount", 100, "vocdoni faucet amount")
 	cfg.Faucet.SendConditions.Balance = *pflag.Uint64("faucetAmountThreshold", 100, "minimum amount threshold for transfer")
 	cfg.Faucet.SendConditions.Challenge = *pflag.Bool("faucetEnableChallenge", false, "if true a faucet challenge must be solved")
 	// api
@@ -141,7 +144,8 @@ func (cfg *Config) InitConfig() error {
 	viper.BindPFlag("faucet.EVMEndpoints", pflag.Lookup("evmEndpoints"))
 	viper.BindPFlag("faucet.EVMNetwork", pflag.Lookup("evmNetwork"))
 	viper.BindPFlag("faucet.VocdoniNetwork", pflag.Lookup("vocdoniNetwork"))
-	viper.BindPFlag("faucet.Amount", pflag.Lookup("faucetAmount"))
+	viper.BindPFlag("faucet.EVMAmount", pflag.Lookup("faucetEVMAmount"))
+	viper.BindPFlag("faucet.VocdoniAmount", pflag.Lookup("faucetVocdoniAmount"))
 	viper.BindPFlag("faucet.SendConditions.Balance", pflag.Lookup("faucetAmountThreshold"))
 	viper.BindPFlag("faucet.SendConditions.Challenge", pflag.Lookup("faucetEnableChallenge"))
 	// api

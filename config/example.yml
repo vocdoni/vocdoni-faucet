@@ -5,15 +5,16 @@ api:
         domain: ""
 datadir: /home/me/.faucet
 faucet:
-    amount: "100"
     enableevm: true
     enablevocdoni: true
+    evmamount: "1"
     evmendpoints: []
     evmnetwork: ""
     evmprivkeys: []
     sendconditions:
         balance: "100"
         challenge: false
+    vocdoniamount: "100"
     vocdoninetwork: ""
     vocdoniprivkey: ""
 logerrorfile: ""

@@ -76,7 +76,7 @@ func (v *Vocdoni) Init(ctx context.Context, vocdoniConfig *config.FaucetConfig) 
 	v.networkID = chainSpecs.networkID
 
 	// set amout to transfer
-	if err := v.setAmount(vocdoniConfig.Amount); err != nil {
+	if err := v.setAmount(vocdoniConfig.VocdoniAmount); err != nil {
 		return err
 	}
 

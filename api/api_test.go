@@ -29,7 +29,7 @@ import (
 
 var (
 	eConfig = &config.FaucetConfig{
-		Amount:       100,
+		EVMAmount:    100,
 		EVMNetwork:   "evmtest",
 		EVMPrivKeys:  []string{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
 		EVMEndpoints: []string{"localhost:8545"},
@@ -40,7 +40,7 @@ var (
 		},
 	}
 	vConfig = &config.FaucetConfig{
-		Amount:         100,
+		EVMAmount:      100,
 		VocdoniNetwork: "vocdoniDev",
 		VocdoniPrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		SendConditions: config.SendConditionsConfig{

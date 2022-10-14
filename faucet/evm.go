@@ -133,7 +133,7 @@ func (e *EVM) Init(ctx context.Context, evmConfig *config.FaucetConfig) error {
 	}
 
 	// set amout to transfer
-	if err := e.SetAmount(evmConfig.Amount); err != nil {
+	if err := e.SetAmount(evmConfig.EVMAmount); err != nil {
 		return ErrInvalidAmount
 	}
 

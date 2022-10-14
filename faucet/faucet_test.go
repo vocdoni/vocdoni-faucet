@@ -13,7 +13,7 @@ import (
 
 var (
 	eConfig = &config.FaucetConfig{
-		Amount:       100,
+		EVMAmount:    100,
 		EVMNetwork:   "mainnet",
 		EVMPrivKeys:  []string{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
 		EVMEndpoints: []string{"http://localhost:8545"},
@@ -24,7 +24,7 @@ var (
 		},
 	}
 	vConfig = &config.FaucetConfig{
-		Amount:         100,
+		VocdoniAmount:  100,
 		VocdoniNetwork: "vocdoniDev",
 		VocdoniPrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		SendConditions: config.SendConditionsConfig{
@@ -46,10 +46,10 @@ func TestNewEVM(t *testing.T) {
 	qt.Assert(t, e.Init(context.Background(), &eConfig1), qt.ErrorIs, faucet.ErrInvalidEndpoint)
 	// should not accept an invalid amout
 	eConfig1.EVMEndpoints = []string{"http://localhost:8545"}
-	eConfig1.Amount = 0
+	eConfig1.EVMAmount = 0
 	qt.Assert(t, e.Init(context.Background(), &eConfig1), qt.ErrorIs, faucet.ErrInvalidAmount)
 	// should not accept invalid priv keys
-	eConfig1.Amount = 100
+	eConfig1.EVMAmount = 100
 	eConfig1.EVMPrivKeys = []string{"0x0"}
 	qt.Assert(t, e.Init(context.Background(), &eConfig1), qt.ErrorMatches, "invalid signer")
 	// should not accept an invalid timeout
@@ -160,10 +160,10 @@ func TestNewVocdoni(t *testing.T) {
 	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.ErrorIs, faucet.ErrInvalidNetwork)
 	// should not accept an invalid amout
 	vConfig1.VocdoniNetwork = "vocdoniDev"
-	vConfig1.Amount = 0
+	vConfig1.VocdoniAmount = 0
 	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.ErrorIs, faucet.ErrInvalidAmount)
 	// should not accept an invalid priv key
-	vConfig1.Amount = 100
+	vConfig1.VocdoniAmount = 100
 	vConfig1.VocdoniPrivKey = "0x0"
 	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.ErrorMatches, "cannot import key: invalid hex data for private key")
 	// should work
