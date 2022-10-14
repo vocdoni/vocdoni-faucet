@@ -266,7 +266,7 @@ func (e *EVM) sendTokens(ctx context.Context, to evmcommon.Address, signerIndex 
 		GasTipCap: maxPriorityFeePerGas,
 		Gas:       uint64(21000), // enough for standard eth transfers
 		To:        &to,
-		Value:     big.NewInt(int64(e.amount)),
+		Value:     big.NewInt(int64(e.amount)), // in wei
 	})
 	// sign tx
 	signedTx, err := evmtypes.SignTx(tx, evmtypes.NewLondonSigner(big.NewInt(int64(e.chainID))), &e.signers[signerIndex].SignKeys.Private)

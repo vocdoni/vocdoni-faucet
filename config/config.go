@@ -107,7 +107,7 @@ func (cfg *Config) InitConfig() error {
 		"", "one of the available evm chains")
 	cfg.Faucet.VocdoniNetwork = *pflag.String("vocdoniNetwork",
 		"", "one of the available vocdoni networks")
-	cfg.Faucet.EVMAmount = *pflag.Uint64("faucetEVMAmount", 1, "evm faucet amount")
+	cfg.Faucet.EVMAmount = *pflag.Uint64("faucetEVMAmount", 1, "evm faucet amount in wei (1000000000000000000 == 1 ETH)")
 	cfg.Faucet.VocdoniAmount = *pflag.Uint64("faucetVocdoniAmount", 100, "vocdoni faucet amount")
 	cfg.Faucet.SendConditions.Balance = *pflag.Uint64("faucetAmountThreshold", 100, "minimum amount threshold for transfer")
 	cfg.Faucet.SendConditions.Challenge = *pflag.Bool("faucetEnableChallenge", false, "if true a faucet challenge must be solved")
