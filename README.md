@@ -31,7 +31,7 @@ Options:
 - `--apiListenHost` **string**         API endpoint listen address (default "0.0.0.0")
 - `--apiListenPort` **int**            API endpoint http port (default 8000)
 - `--apiRoute` **string**              dvote API route (default "/")
-- `--apiSSLDomain` **string**          enable TLS secure API domain with LetsEncrypt auto-generated certificate
+- `--apiTLSDomain` **string**          enable TLS secure API domain with LetsEncrypt auto-generated certificate
 - `--dataDir` **string**               directory where data is stored (default "/home/me/.faucet")
 - `--enableEVM`                        enable evm faucet (default true)
 - `--enableMetrics`                    enable prometheus metrics (default true)

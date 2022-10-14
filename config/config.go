@@ -112,7 +112,7 @@ func (cfg *Config) InitConfig() error {
 	cfg.API.Route = *pflag.String("apiRoute", "/", "dvote API route")
 	cfg.API.ListenHost = *pflag.String("apiListenHost", "0.0.0.0", "API endpoint listen address")
 	cfg.API.ListenPort = *pflag.Int("apiListenPort", 8000, "API endpoint http port")
-	cfg.API.Ssl.Domain = *pflag.String("apiSSLDomain", "",
+	cfg.API.Ssl.Domain = *pflag.String("apiTLSDomain", "",
 		"enable TLS secure API domain with LetsEncrypt auto-generated certificate")
 	// parse flags
 	pflag.Parse()
@@ -149,7 +149,7 @@ func (cfg *Config) InitConfig() error {
 	viper.BindPFlag("api.ListenHost", pflag.Lookup("listenHost"))
 	viper.BindPFlag("api.ListenPort", pflag.Lookup("listenPort"))
 	viper.Set("api.Ssl.DirCert", cfg.DataDir+"/tls")
-	viper.BindPFlag("api.Ssl.Domain", pflag.Lookup("apiSSLDomain"))
+	viper.BindPFlag("api.Ssl.Domain", pflag.Lookup("apiTLSDomain"))
 
 	// check if config file exists
 	_, err = os.Stat(cfg.DataDir + "/vocdoni-faucet.yml")
