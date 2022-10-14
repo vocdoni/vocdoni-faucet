@@ -11,8 +11,9 @@ import (
 type FaucetNetworks int
 
 const (
+	FaucetNetworksUndefined FaucetNetworks = iota
 	// FaucetNetworksEthereum represents the Ethereum main network
-	FaucetNetworksEthereum FaucetNetworks = iota
+	FaucetNetworksEthereum
 	// FaucetNetworksVocdoniDev represents the Vocdoni development network
 	FaucetNetworksVocdoniDev
 	// FaucetNetworksVocdoniStage represents the Vocdoni stagging network
@@ -49,6 +50,7 @@ var (
 var (
 	// SupportedFaucetNetworksMap have all the networks the faucet supports
 	SupportedFaucetNetworksMap = map[string]FaucetNetworks{
+		"undefined":    FaucetNetworksUndefined,
 		"mainnet":      FaucetNetworksEthereum,
 		"vocdoniDev":   FaucetNetworksVocdoniDev,
 		"vocdoniStage": FaucetNetworksVocdoniStage,
