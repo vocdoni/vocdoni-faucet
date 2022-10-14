@@ -117,6 +117,7 @@ func (cfg *Config) InitConfig() error {
 	cfg.API.ListenPort = *pflag.Int("apiListenPort", 8000, "API endpoint http port")
 	cfg.API.Ssl.Domain = *pflag.String("apiTLSDomain", "",
 		"enable TLS secure API domain with LetsEncrypt auto-generated certificate")
+	cfg.API.AllowedAddrs = *pflag.String("apiWhitelist", "", "bearer token whitelist for accepting requests (comma separated string)")
 	// parse flags
 	pflag.Parse()
 
@@ -152,6 +153,7 @@ func (cfg *Config) InitConfig() error {
 	viper.BindPFlag("api.Route", pflag.Lookup("apiRoute"))
 	viper.BindPFlag("api.ListenHost", pflag.Lookup("listenHost"))
 	viper.BindPFlag("api.ListenPort", pflag.Lookup("listenPort"))
+	viper.BindPFlag("api.Whitelist", pflag.Lookup("apiWhitelist"))
 	viper.Set("api.Ssl.DirCert", cfg.DataDir+"/tls")
 	viper.BindPFlag("api.Ssl.Domain", pflag.Lookup("apiTLSDomain"))
 
