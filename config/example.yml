@@ -1,5 +1,5 @@
 api:
-    route: /
+    route: /faucet
     ssl:
         dircert: /home/me/.faucet/tls
         domain: ""

@@ -2,22 +2,32 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/google/uuid"
 	"go.vocdoni.io/dvote/httprouter"
 	"go.vocdoni.io/dvote/httprouter/bearerstdapi"
-	"go.vocdoni.io/dvote/log"
 	"go.vocdoni.io/dvote/types"
-	"go.vocdoni.io/proto/build/go/models"
+	"go.vocdoni.io/dvote/util"
 	"go.vocdoni.io/vocdoni-faucet/faucet"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
 	EVM     = "evm"
 	Vocdoni = "vocdoni"
+	// Maximum number of requests a whitelisted caller can do
+	MaxRequest = 1000
+)
+
+var (
+	ErrInvalidToken       = errors.New("invalid token")
+	ErrInvalidFromAddress = errors.New("invalid from address")
 )
 
 // FaucetRequestData represents the data of a faucet request
@@ -30,8 +40,10 @@ type FaucetRequestData struct {
 
 // FaucetResponse represents the message on the response of a faucet request
 type FaucetResponse struct {
+	// Amount transferred
+	Amount uint64 `json:"amount"`
 	// FaucetPackage is the Vocdoni faucet package
-	FaucetPackage *models.FaucetPackage `json:"faucetPackage,omitempty"`
+	FaucetPackage []byte `json:"faucetPackage,omitempty"`
 	// TxHash is the EVM tx hash
 	TxHash types.HexBytes `json:"txHash,omitempty"`
 }
@@ -52,7 +64,11 @@ func NewAPI() *API {
 }
 
 // Init initianizes an API instance
-func (a *API) Init(router *httprouter.HTTProuter, baseRoute string, vfaucet *faucet.Vocdoni, efaucet *faucet.EVM) error {
+func (a *API) Init(router *httprouter.HTTProuter,
+	baseRoute,
+	whitelist string,
+	vfaucet *faucet.Vocdoni,
+	efaucet *faucet.EVM) error {
 	if router == nil {
 		return fmt.Errorf("httprouter is nil")
 	}
@@ -70,6 +86,11 @@ func (a *API) Init(router *httprouter.HTTProuter, baseRoute string, vfaucet *fau
 	if a.api, err = bearerstdapi.NewBearerStandardAPI(a.router, a.baseRoute); err != nil {
 		return err
 	}
+	// add whitelisted bearer tokens
+	bearerWhitelist := strings.Split(whitelist, ",")
+	for _, token := range bearerWhitelist {
+		a.api.AddAuthToken(token, int64(MaxRequest))
+	}
 	// attach faucet modules
 	a.attach(vfaucet, efaucet)
 	// enable handlers
@@ -81,9 +102,17 @@ func (a *API) Init(router *httprouter.HTTProuter, baseRoute string, vfaucet *fau
 
 func (a *API) enableFaucetHandlers() error {
 	if err := a.api.RegisterMethod(
-		"/faucet",
-		"POST",
-		bearerstdapi.MethodAccessTypePublic,
+		"/evm/{network}/{from}",
+		"GET",
+		bearerstdapi.MethodAccessTypePrivate,
+		a.faucetHandler,
+	); err != nil {
+		return err
+	}
+	if err := a.api.RegisterMethod(
+		"/vocdoni/{network}/{from}",
+		"GET",
+		bearerstdapi.MethodAccessTypePrivate,
 		a.faucetHandler,
 	); err != nil {
 		return err
@@ -98,45 +127,98 @@ func (a *API) attach(vocdoniFaucet *faucet.Vocdoni, EVMFaucet *faucet.EVM) {
 	a.evmFaucet = EVMFaucet
 }
 
-// request funds to the faucet
+func (a *API) networkParse(network string) faucet.FaucetNetworks {
+	return faucet.SupportedFaucetNetworksMap[network]
+}
+
+func (a *API) fromParse(from string) (*common.Address, error) {
+	from = util.TrimHex(from)
+	fromAddrBytes, err := hex.DecodeString(from)
+	if err != nil {
+		return nil, ErrInvalidFromAddress
+	}
+	fromAddr := common.BytesToAddress(fromAddrBytes)
+	if fromAddr == types.EthereumZeroAddress {
+		return nil, ErrInvalidFromAddress
+	}
+	return &fromAddr, err
+}
+
 func (a *API) faucetHandler(msg *bearerstdapi.BearerStandardAPIdata, ctx *httprouter.HTTPContext) error {
-	req := &FaucetRequestData{}
-	if err := json.Unmarshal(msg.Data, req); err != nil {
+	// get auth token
+	token, err := uuid.Parse(msg.AuthToken)
+	if err != nil {
 		return err
 	}
-	fromAddress := common.BytesToAddress(req.From)
-	log.Infof(`request: { "network": %s, "from": %s }`, req.Network, fromAddress)
-
-	switch req.Network {
-	// evm
-	case EVM:
-		data, err := a.evmFaucet.SendTokens(context.Background(), fromAddress)
-		if err != nil {
-			return fmt.Errorf("error sending evm tokens: %s", err)
-		}
-		resp := &FaucetResponse{
-			TxHash: types.HexBytes(data.Bytes()),
-		}
-		msg, err := json.Marshal(resp)
-		if err != nil {
-			return err
-		}
-		return ctx.Send(msg, bearerstdapi.HTTPstatusCodeOK)
-	// vocdoni
-	case Vocdoni:
-		faucetPackage, err := a.vocdoniFaucet.GenerateFaucetPackage(fromAddress)
-		if err != nil {
-			return fmt.Errorf("error sending evm tokens: %s", err)
-		}
-		resp := &FaucetResponse{
-			FaucetPackage: faucetPackage,
-		}
-		msg, err := json.Marshal(resp)
-		if err != nil {
-			return err
-		}
-		return ctx.Send(msg, bearerstdapi.HTTPstatusCodeOK)
-	default:
-		return fmt.Errorf("%s", "unsupported network")
+	// authorize
+	if a.api.GetAuthTokens(token.String()) == 0 {
+		return ErrInvalidToken
 	}
+	// get network url param
+	network := a.networkParse(ctx.URLParam("network"))
+	// get from url param
+	from, err := a.fromParse(ctx.URLParam("from"))
+	if err != nil {
+		return err
+	}
+	// handle
+	switch network {
+	case faucet.FaucetNetworksUndefined:
+		return fmt.Errorf("%s", "unsupported network")
+	case faucet.FaucetNetworksVocdoniDev,
+		faucet.FaucetNetworksVocdoniStage,
+		faucet.FaucetNetworksVocdoniAzeno:
+		return a.vocdoniFaucetHandler(ctx, network, *from)
+	case faucet.FaucetNetworksEthereum,
+		faucet.FaucetNetworksGoerli,
+		faucet.FaucetNetworksSepolia,
+		faucet.FaucetNetworksMatic,
+		faucet.FaucetNetworksMumbai,
+		faucet.FaucetNetworksGnosisChain,
+		faucet.FaucetNetworksEVMTest:
+		return a.evmFaucetHandler(ctx, network, *from)
+	}
+	return fmt.Errorf("cannot handle request")
+}
+
+// request evm funds to the faucet
+func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
+	network faucet.FaucetNetworks,
+	from common.Address) error {
+	txHash, err := a.evmFaucet.SendTokens(context.Background(), from)
+	if err != nil {
+		return fmt.Errorf("error sending evm tokens: %s", err)
+	}
+	resp := &FaucetResponse{
+		TxHash: types.HexBytes(txHash.Bytes()),
+		Amount: a.evmFaucet.Amout(),
+	}
+	msg, err := json.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	return ctx.Send(msg, bearerstdapi.HTTPstatusCodeOK)
+}
+
+// request vocdoni funds to the faucet
+func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
+	network faucet.FaucetNetworks,
+	from common.Address) error {
+	faucetPackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
+	if err != nil {
+		return fmt.Errorf("error sending evm tokens: %s", err)
+	}
+	faucetPackageBytes, err := proto.Marshal(faucetPackage)
+	if err != nil {
+		return err
+	}
+	resp := &FaucetResponse{
+		FaucetPackage: faucetPackageBytes,
+		Amount:        a.vocdoniFaucet.Amount(),
+	}
+	msg, err := json.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	return ctx.Send(msg, bearerstdapi.HTTPstatusCodeOK)
 }

@@ -3,6 +3,7 @@ package api_test
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,7 +21,7 @@ import (
 	"go.vocdoni.io/dvote/crypto/ethereum"
 	"go.vocdoni.io/dvote/httprouter"
 	"go.vocdoni.io/dvote/log"
-	"go.vocdoni.io/dvote/types"
+	"go.vocdoni.io/proto/build/go/models"
 	faucetapi "go.vocdoni.io/vocdoni-faucet/api"
 	"go.vocdoni.io/vocdoni-faucet/config"
 	"go.vocdoni.io/vocdoni-faucet/faucet"
@@ -40,7 +41,7 @@ var (
 		},
 	}
 	vConfig = &config.FaucetConfig{
-		EVMAmount:      100,
+		VocdoniAmount:  100,
 		VocdoniNetwork: "vocdoniDev",
 		VocdoniPrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		SendConditions: config.SendConditionsConfig{
@@ -48,6 +49,7 @@ var (
 			Challenge: false,
 		},
 	}
+	randomEVMAddress = evmcommon.HexToAddress("0xAAafD269cf7F6C7a7afa92A32127fbc72593638e")
 )
 
 func TestAPI(t *testing.T) {
@@ -69,58 +71,42 @@ func TestAPI(t *testing.T) {
 	t.Logf("address: %s", addr)
 
 	api := faucetapi.NewAPI()
-	qt.Assert(t, api.Init(&router, "/", v, e), qt.IsNil)
-
-	c := newTestHTTPclient(t, addr, nil)
+	// api whitelist
+	token, err := uuid.NewUUID()
+	qt.Assert(t, err, qt.IsNil)
+	qt.Assert(t, api.Init(&router, "/faucet", token.String(), v, e), qt.IsNil)
+	c := newTestHTTPclient(t, addr, &token)
 
 	// create vocdoni request
-	body := &faucetapi.FaucetRequestData{
-		Network: "vocdoni",
-		From:    types.HexBytes(evmcommon.Address{}.Bytes()),
-	}
-	data, err := json.Marshal(body)
-	qt.Assert(t, err, qt.IsNil)
-	resp, code := c.request("POST", data)
+	resp, code := c.request("GET", nil, "vocdoni", "vocdoniDev", randomEVMAddress.Hex())
 	qt.Assert(t, code, qt.Equals, 200)
 	respData := &faucetapi.FaucetResponse{}
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)
-	qt.Assert(t, respData.FaucetPackage.Payload.Amount, qt.DeepEquals, uint64(100))
-	qt.Assert(t, evmcommon.BytesToAddress(respData.FaucetPackage.Payload.To), qt.DeepEquals, evmcommon.BytesToAddress([]byte{}))
-	payloadBytes, err := proto.Marshal(respData.FaucetPackage.Payload)
+	faucetPackageData := &models.FaucetPackage{}
+	qt.Assert(t, proto.Unmarshal(respData.FaucetPackage, faucetPackageData), qt.IsNil)
+	qt.Assert(t, faucetPackageData.Payload.Amount, qt.DeepEquals, uint64(100))
+	qt.Assert(t, evmcommon.BytesToAddress(faucetPackageData.Payload.To), qt.DeepEquals, randomEVMAddress)
+	payloadBytes, err := proto.Marshal(faucetPackageData.Payload)
 	qt.Assert(t, err, qt.IsNil)
-	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, respData.FaucetPackage.Signature)
+	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, faucetPackageData.Signature)
 	qt.Assert(t, err, qt.IsNil)
 	qt.Assert(t, fromAddress, qt.DeepEquals, v.Signer().Address())
 	t.Logf("%s", fmt.Sprintf(
 		`"response": {
 			"code": %d,
 			"data": {
-				"faucetPackage":{
-					"payload": {
-						"identifier": %d,
-						"to": %s,
-						"amount": %d
-					},
-				"signature": %s}
-				}
-			},
+				"faucetPackage": %s,
+				"amount": %d
+			}
 		recovered from address of the faucet is %s`,
 		code,
-		respData.FaucetPackage.Payload.Identifier,
-		evmcommon.BytesToAddress(respData.FaucetPackage.Payload.To),
-		respData.FaucetPackage.Payload.Amount,
-		evmcommon.Bytes2Hex(respData.FaucetPackage.Signature),
+		hex.EncodeToString(respData.FaucetPackage),
+		respData.Amount,
 		fromAddress,
 	))
 
 	// create ethereum request
-	body = &faucetapi.FaucetRequestData{
-		Network: "evm",
-		From:    types.HexBytes(evmcommon.HexToAddress("0xAAafD269cf7F6C7a7afa92A32127fbc72593638e").Bytes()),
-	}
-	data, err = json.Marshal(body)
-	qt.Assert(t, err, qt.IsNil)
-	resp, code = c.request("POST", data)
+	resp, code = c.request("GET", nil, "evm", "evmtest", randomEVMAddress.String())
 	// make the test blockchain to mine a block
 	qt.Assert(t, code, qt.Equals, 200)
 	respData = &faucetapi.FaucetResponse{}
@@ -129,18 +115,20 @@ func TestAPI(t *testing.T) {
 		`"response": {
 				"code": %d,
 				"data": {
-					"txHash": "%s"
+					"txHash": "%s",
+					"amount": "%d"
 				},
 			}`,
 		code,
 		evmcommon.BytesToHash(respData.TxHash).Hex(),
+		respData.Amount,
 	))
-	balance, err := e.ClientBalanceAt(context.Background(), evmcommon.HexToAddress("0xAAafD269cf7F6C7a7afa92A32127fbc72593638e"), nil)
+	balance, err := e.ClientBalanceAt(context.Background(), randomEVMAddress, nil)
 	qt.Assert(t, err, qt.IsNil)
 	// 0 balance as no commited block
 	qt.Assert(t, balance.Cmp(big.NewInt(int64(0))), qt.Equals, 0)
 	e.TestBackend().Commit()
-	balance, err = e.ClientBalanceAt(context.Background(), evmcommon.HexToAddress("0xAAafD269cf7F6C7a7afa92A32127fbc72593638e"), nil)
+	balance, err = e.ClientBalanceAt(context.Background(), randomEVMAddress, nil)
 	qt.Assert(t, err, qt.IsNil)
 	// balance updated
 	qt.Assert(t, balance.Cmp(big.NewInt(int64(100))), qt.Equals, 0)
