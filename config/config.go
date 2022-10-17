@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 	vocdoniConfig "go.vocdoni.io/dvote/config"
 )
+
+var ErrBindPFlag = errors.New("viper error binding flag")
 
 // LogConfig logging configuration
 type LogConfig struct {
@@ -94,7 +97,7 @@ func (cfg *Config) InitConfig() error {
 	pflag.StringVar(&cfg.DataDir, "dataDir", home+"/.faucet", "directory where data is stored")
 	cfg.Save = *pflag.Bool("saveConfig", false,
 		"overwrites an existing config file with the CLI provided flags")
-	//faucet
+	// faucet
 	cfg.Faucet.EnableEVM = *pflag.Bool("enableEVM", true, "enable evm faucet")
 	cfg.Faucet.EnableVocdoni = *pflag.Bool("enableVocdoni", true, "enable vocdoni faucet")
 	cfg.Faucet.EVMPrivKeys = *pflag.StringArray("evmPrivKeys", []string{},
@@ -107,17 +110,33 @@ func (cfg *Config) InitConfig() error {
 		"", "one of the available evm chains")
 	cfg.Faucet.VocdoniNetwork = *pflag.String("vocdoniNetwork",
 		"", "one of the available vocdoni networks")
-	cfg.Faucet.EVMAmount = *pflag.Uint64("faucetEVMAmount", 1, "evm faucet amount in wei (1000000000000000000 == 1 ETH)")
+	cfg.Faucet.EVMAmount = *pflag.Uint64(
+		"faucetEVMAmount",
+		1,
+		"evm faucet amount in wei (1000000000000000000 == 1 ETH)",
+	)
 	cfg.Faucet.VocdoniAmount = *pflag.Uint64("faucetVocdoniAmount", 100, "vocdoni faucet amount")
-	cfg.Faucet.SendConditions.Balance = *pflag.Uint64("faucetAmountThreshold", 100, "minimum amount threshold for transfer")
-	cfg.Faucet.SendConditions.Challenge = *pflag.Bool("faucetEnableChallenge", false, "if true a faucet challenge must be solved")
+	cfg.Faucet.SendConditions.Balance = *pflag.Uint64(
+		"faucetAmountThreshold",
+		100,
+		"minimum amount threshold for transfer",
+	)
+	cfg.Faucet.SendConditions.Challenge = *pflag.Bool(
+		"faucetEnableChallenge",
+		false,
+		"if true a faucet challenge must be solved",
+	)
 	// api
 	cfg.API.Route = *pflag.String("apiRoute", "/", "dvote API route")
 	cfg.API.ListenHost = *pflag.String("apiListenHost", "0.0.0.0", "API endpoint listen address")
 	cfg.API.ListenPort = *pflag.Int("apiListenPort", 8000, "API endpoint http port")
 	cfg.API.Ssl.Domain = *pflag.String("apiTLSDomain", "",
 		"enable TLS secure API domain with LetsEncrypt auto-generated certificate")
-	cfg.API.AllowedAddrs = *pflag.String("apiWhitelist", "", "bearer token whitelist for accepting requests (comma separated string)")
+	cfg.API.AllowedAddrs = *pflag.String(
+		"apiWhitelist",
+		"",
+		"bearer token whitelist for accepting requests (comma separated string)",
+	)
 	// parse flags
 	pflag.Parse()
 
@@ -132,30 +151,79 @@ func (cfg *Config) InitConfig() error {
 
 	// binding flags to viper
 	// logging
-	viper.BindPFlag("logLevel", pflag.Lookup("logLevel"))
-	viper.BindPFlag("logErrorFile", pflag.Lookup("logErrorFile"))
-	viper.BindPFlag("logOutput", pflag.Lookup("logOutput"))
+	if err := viper.BindPFlag("logLevel", pflag.Lookup("logLevel")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("logErrorFile", pflag.Lookup("logErrorFile")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("logOutput", pflag.Lookup("logOutput")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
 	// common
-	viper.BindPFlag("dataDir", pflag.Lookup("dataDir"))
+	if err := viper.BindPFlag("dataDir", pflag.Lookup("dataDir")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
 	// faucet
-	viper.BindPFlag("faucet.EnableEVM", pflag.Lookup("enableEVM"))
-	viper.BindPFlag("faucet.EnableVocdoni", pflag.Lookup("enableVocdoni"))
-	viper.BindPFlag("faucet.EVMPrivKeys", pflag.Lookup("evmPrivKeys"))
-	viper.BindPFlag("faucet.VocdoniPrivKey", pflag.Lookup("vocdoniPrivKey"))
-	viper.BindPFlag("faucet.EVMEndpoints", pflag.Lookup("evmEndpoints"))
-	viper.BindPFlag("faucet.EVMNetwork", pflag.Lookup("evmNetwork"))
-	viper.BindPFlag("faucet.VocdoniNetwork", pflag.Lookup("vocdoniNetwork"))
-	viper.BindPFlag("faucet.EVMAmount", pflag.Lookup("faucetEVMAmount"))
-	viper.BindPFlag("faucet.VocdoniAmount", pflag.Lookup("faucetVocdoniAmount"))
-	viper.BindPFlag("faucet.SendConditions.Balance", pflag.Lookup("faucetAmountThreshold"))
-	viper.BindPFlag("faucet.SendConditions.Challenge", pflag.Lookup("faucetEnableChallenge"))
+	if err := viper.BindPFlag("faucet.EnableEVM", pflag.Lookup("enableEVM")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("faucet.EnableVocdoni", pflag.Lookup("enableVocdoni")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("faucet.EVMPrivKeys", pflag.Lookup("evmPrivKeys")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("faucet.VocdoniPrivKey", pflag.Lookup("vocdoniPrivKey")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("faucet.EVMEndpoints", pflag.Lookup("evmEndpoints")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("faucet.EVMNetwork", pflag.Lookup("evmNetwork")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("faucet.VocdoniNetwork", pflag.Lookup("vocdoniNetwork")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("faucet.EVMAmount", pflag.Lookup("faucetEVMAmount")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag(
+		"faucet.VocdoniAmount",
+		pflag.Lookup("faucetVocdoniAmount"),
+	); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag(
+		"faucet.SendConditions.Balance",
+		pflag.Lookup("faucetAmountThreshold"),
+	); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag(
+		"faucet.SendConditions.Challenge",
+		pflag.Lookup("faucetEnableChallenge"),
+	); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
 	// api
-	viper.BindPFlag("api.Route", pflag.Lookup("apiRoute"))
-	viper.BindPFlag("api.ListenHost", pflag.Lookup("listenHost"))
-	viper.BindPFlag("api.ListenPort", pflag.Lookup("listenPort"))
-	viper.BindPFlag("api.Whitelist", pflag.Lookup("apiWhitelist"))
+	if err := viper.BindPFlag("api.Route", pflag.Lookup("apiRoute")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("api.ListenHost", pflag.Lookup("listenHost")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("api.ListenPort", pflag.Lookup("listenPort")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag("api.Whitelist", pflag.Lookup("apiWhitelist")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
 	viper.Set("api.Ssl.DirCert", cfg.DataDir+"/tls")
-	viper.BindPFlag("api.Ssl.Domain", pflag.Lookup("apiTLSDomain"))
+	if err := viper.BindPFlag("api.Ssl.Domain", pflag.Lookup("apiTLSDomain")); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
 
 	// check if config file exists
 	_, err = os.Stat(cfg.DataDir + "/vocdoni-faucet.yml")
@@ -168,14 +236,12 @@ func (cfg *Config) InitConfig() error {
 		// create config file if not exists
 		if err := viper.SafeWriteConfig(); err != nil {
 			return fmt.Errorf("cannot write config file into config dir: %s", err)
-
 		}
 	} else {
 		// read config file
 		err = viper.ReadInConfig()
 		if err != nil {
 			return fmt.Errorf("cannot read loaded config file in %s: %s", cfg.DataDir, err)
-
 		}
 	}
 	if err := viper.Unmarshal(&cfg); err != nil {

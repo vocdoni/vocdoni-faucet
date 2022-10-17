@@ -68,7 +68,8 @@ func (a *API) Init(router *httprouter.HTTProuter,
 	baseRoute,
 	whitelist string,
 	vfaucet *faucet.Vocdoni,
-	efaucet *faucet.EVM) error {
+	efaucet *faucet.EVM,
+) error {
 	if router == nil {
 		return fmt.Errorf("httprouter is nil")
 	}
@@ -120,7 +121,8 @@ func (a *API) enableFaucetHandlers() error {
 	return nil
 }
 
-// attach takes a list of modules which are used by the handlers in order to interact with the system.
+// attach takes a list of modules which are used
+// by the handlers in order to interact with the system.
 // Attach must be called before enableHandlers.
 func (a *API) attach(vocdoniFaucet *faucet.Vocdoni, EVMFaucet *faucet.EVM) {
 	a.vocdoniFaucet = vocdoniFaucet
@@ -144,7 +146,9 @@ func (a *API) fromParse(from string) (*common.Address, error) {
 	return &fromAddr, err
 }
 
-func (a *API) faucetHandler(msg *bearerstdapi.BearerStandardAPIdata, ctx *httprouter.HTTPContext) error {
+func (a *API) faucetHandler(msg *bearerstdapi.BearerStandardAPIdata,
+	ctx *httprouter.HTTPContext,
+) error {
 	// get auth token
 	token, err := uuid.Parse(msg.AuthToken)
 	if err != nil {
@@ -184,7 +188,8 @@ func (a *API) faucetHandler(msg *bearerstdapi.BearerStandardAPIdata, ctx *httpro
 // request evm funds to the faucet
 func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 	network faucet.FaucetNetworks,
-	from common.Address) error {
+	from common.Address,
+) error {
 	txHash, err := a.evmFaucet.SendTokens(context.Background(), from)
 	if err != nil {
 		return fmt.Errorf("error sending evm tokens: %s", err)
@@ -203,7 +208,8 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 // request vocdoni funds to the faucet
 func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 	network faucet.FaucetNetworks,
-	from common.Address) error {
+	from common.Address,
+) error {
 	faucetPackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
 	if err != nil {
 		return fmt.Errorf("error sending evm tokens: %s", err)

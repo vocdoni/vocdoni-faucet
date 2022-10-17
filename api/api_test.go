@@ -64,7 +64,7 @@ func TestAPI(t *testing.T) {
 	qt.Assert(t, e.InitForTest(context.Background(), eConfig), qt.IsNil)
 
 	router := httprouter.HTTProuter{}
-	router.Init("127.0.0.1", 0)
+	qt.Assert(t, router.Init("127.0.0.1", 0), qt.IsNil)
 	addr, err := url.Parse("http://" + path.Join(router.Address().String(), "/faucet"))
 	qt.Assert(t, err, qt.IsNil)
 
@@ -85,7 +85,11 @@ func TestAPI(t *testing.T) {
 	faucetPackageData := &models.FaucetPackage{}
 	qt.Assert(t, proto.Unmarshal(respData.FaucetPackage, faucetPackageData), qt.IsNil)
 	qt.Assert(t, faucetPackageData.Payload.Amount, qt.DeepEquals, uint64(100))
-	qt.Assert(t, evmcommon.BytesToAddress(faucetPackageData.Payload.To), qt.DeepEquals, randomEVMAddress)
+	qt.Assert(t,
+		evmcommon.BytesToAddress(faucetPackageData.Payload.To),
+		qt.DeepEquals,
+		randomEVMAddress,
+	)
 	payloadBytes, err := proto.Marshal(faucetPackageData.Payload)
 	qt.Assert(t, err, qt.IsNil)
 	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, faucetPackageData.Signature)
@@ -125,7 +129,7 @@ func TestAPI(t *testing.T) {
 	))
 	balance, err := e.ClientBalanceAt(context.Background(), randomEVMAddress, nil)
 	qt.Assert(t, err, qt.IsNil)
-	// 0 balance as no commited block
+	// 0 balance as no committed block
 	qt.Assert(t, balance.Cmp(big.NewInt(int64(0))), qt.Equals, 0)
 	e.TestBackend().Commit()
 	balance, err = e.ClientBalanceAt(context.Background(), randomEVMAddress, nil)

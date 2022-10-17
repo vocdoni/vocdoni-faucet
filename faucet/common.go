@@ -35,6 +35,7 @@ const (
 )
 
 var (
+	MAXINT64 = int64(9223372036854775807)
 	// ErrInvalidEndpoint error wrapping invalid endpoint errors
 	ErrInvalidEndpoint error = errors.New("invalid endpoint")
 	// ErrInvalidAmount error wrapping invalid amount errors
@@ -45,9 +46,7 @@ var (
 	ErrInvalidTimeout error = errors.New("invalid timeout")
 	// ErrInvalidSigner error wrapping invalid signer errors
 	ErrInvalidSigner error = errors.New("invalid signer")
-)
 
-var (
 	// SupportedFaucetNetworksMap have all the networks the faucet supports
 	SupportedFaucetNetworksMap = map[string]FaucetNetworks{
 		"undefined":    FaucetNetworksUndefined,
@@ -64,7 +63,7 @@ var (
 	}
 )
 
-// Signer representes a signer
+// Signer represents a signer
 type Signer struct {
 	// SignKeys ECDSA keypair
 	SignKeys *ethereum.SignKeys

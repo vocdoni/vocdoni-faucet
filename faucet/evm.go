@@ -186,7 +186,8 @@ func (e *EVM) NewClient(ctx context.Context) error {
 // from the connected node
 func (e *EVM) ClientBalanceAt(ctx context.Context,
 	address evmcommon.Address,
-	blockNumber *big.Int) (*big.Int, error) {
+	blockNumber *big.Int,
+) (*big.Int, error) {
 	return e.balanceAt(ctx, address, blockNumber)
 }
 
@@ -221,7 +222,10 @@ func (e *EVM) checkTxStatus(txHash *evmcommon.Hash) (uint64, error) {
 }
 
 // sendTokens send tokens and returns the hash of the tx
-func (e *EVM) sendTokens(ctx context.Context, to evmcommon.Address, signerIndex int) (*evmcommon.Hash, error) {
+func (e *EVM) sendTokens(ctx context.Context,
+	to evmcommon.Address,
+	signerIndex int,
+) (*evmcommon.Hash, error) {
 	// get nonce for the signer
 	tctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
@@ -269,7 +273,10 @@ func (e *EVM) sendTokens(ctx context.Context, to evmcommon.Address, signerIndex 
 		Value:     big.NewInt(int64(e.amount)), // in wei
 	})
 	// sign tx
-	signedTx, err := evmtypes.SignTx(tx, evmtypes.NewLondonSigner(big.NewInt(int64(e.chainID))), &e.signers[signerIndex].SignKeys.Private)
+	signedTx, err := evmtypes.SignTx(tx,
+		evmtypes.NewLondonSigner(big.NewInt(int64(e.chainID))),
+		&e.signers[signerIndex].SignKeys.Private,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("cannot sign transaction: %s", err)
 	}
@@ -389,14 +396,14 @@ func (e *EVM) waitForTx(txHash *evmcommon.Hash, signerIndex int) {
 
 func (e *EVM) balanceAt(ctx context.Context,
 	address evmcommon.Address,
-	blockNumber *big.Int) (*big.Int, error) {
+	blockNumber *big.Int,
+) (*big.Int, error) {
 	tctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 	if e.forTest {
 		return e.testBackend.Backend.BalanceAt(tctx, address, blockNumber) // nil means latest block
 	}
 	return e.client.BalanceAt(tctx, address, blockNumber) // nil means latest block
-
 }
 
 // FOR TESTING PURPOSES

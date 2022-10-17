@@ -56,14 +56,13 @@ func TestNewEVM(t *testing.T) {
 	eConfig1.EVMPrivKeys = []string{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
 	eConfig1.EVMTimeout = 0
 	qt.Assert(t, e.Init(context.Background(), &eConfig1), qt.ErrorIs, faucet.ErrInvalidTimeout)
-
 }
 
 func TestNewClient(t *testing.T) {
 	e := faucet.NewEVM()
 	qt.Assert(t, e.Init(context.Background(), eConfig), qt.IsNil)
 	// should not work
-	e.SetEndpoints([]string{})
+	qt.Assert(t, e.SetEndpoints([]string{}), qt.IsNotNil)
 	qt.Assert(t, e.NewClient(context.Background()), qt.IsNotNil)
 }
 
@@ -117,7 +116,7 @@ func TestSendTokens(t *testing.T) {
 	// signers[1] is used
 	// this case is the opposite from the case commented above,
 	// as a new signer is added two send tokens can be executed
-	// without waiting the tx to be mined because two diferent
+	// without waiting the tx to be mined because two different
 	// signers are used.
 
 	newSigner := &ethereum.SignKeys{}
@@ -149,7 +148,6 @@ func TestSendTokens(t *testing.T) {
 	newBalance, err = e.ClientBalanceAt(context.Background(), toAddr3.Address(), nil)
 	qt.Assert(t, err, qt.IsNil)
 	qt.Assert(t, newBalance.Int64(), qt.DeepEquals, int64(100))
-
 }
 
 func TestNewVocdoni(t *testing.T) {
@@ -165,7 +163,12 @@ func TestNewVocdoni(t *testing.T) {
 	// should not accept an invalid priv key
 	vConfig1.VocdoniAmount = 100
 	vConfig1.VocdoniPrivKey = "0x0"
-	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.ErrorMatches, "cannot import key: invalid hex data for private key")
+	qt.Assert(t,
+		v.Init(context.Background(),
+			&vConfig1),
+		qt.ErrorMatches,
+		"cannot import key: invalid hex data for private key",
+	)
 	// should work
 	vConfig1.VocdoniPrivKey = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.IsNil)
