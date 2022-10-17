@@ -131,7 +131,7 @@ func (cfg *Config) InitConfig() error {
 	cfg.API.ListenHost = *pflag.String("apiListenHost", "0.0.0.0", "API endpoint listen address")
 	cfg.API.ListenPort = *pflag.Int("apiListenPort", 8000, "API endpoint http port")
 	cfg.API.Ssl.Domain = *pflag.String("apiTLSDomain", "",
-		"enable TLS secure API domain with LetsEncrypt auto-generated certificate")
+		"enaapiLle TLS secure API domain with LetsEncrypt auto-generated certificate")
 	cfg.API.AllowedAddrs = *pflag.String(
 		"apiWhitelist",
 		"",
@@ -211,10 +211,10 @@ func (cfg *Config) InitConfig() error {
 	if err := viper.BindPFlag("api.Route", pflag.Lookup("apiRoute")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
-	if err := viper.BindPFlag("api.ListenHost", pflag.Lookup("listenHost")); err != nil {
+	if err := viper.BindPFlag("api.ListenHost", pflag.Lookup("apiListenHost")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
-	if err := viper.BindPFlag("api.ListenPort", pflag.Lookup("listenPort")); err != nil {
+	if err := viper.BindPFlag("api.ListenPort", pflag.Lookup("apiListenPort")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
 	if err := viper.BindPFlag("api.Whitelist", pflag.Lookup("apiWhitelist")); err != nil {

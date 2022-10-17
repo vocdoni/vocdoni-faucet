@@ -1,25 +1,13 @@
-# This first chunk downloads dependencies and builds the binaries, in a way that
-# can easily be cached and reused.
-
-FROM golang:1.18.6 AS builder
+FROM golang:1.18-alpine3.15 AS builder
 
 WORKDIR /src
-
-# We also need the duktape stub for the 'go mod download'. Note that we need two
-# COPY lines, since otherwise we do the equivalent of 'cp duktape-stub/* .'.
-COPY go.mod go.sum ./
-RUN go mod download
-RUN apt update && apt install -y ca-certificates
-
-# Build all the binaries at once, so that the final targets don't require having
-# Go installed to build each of them.
 COPY . .
-RUN go build -o=. -ldflags='-w -s' ./cmd/main 
+RUN apk update && apk add build-base
+RUN go build -o=main -ldflags="-s -w" ./cmd/
 
-FROM debian:10.8-slim
+FROM alpine:3.13
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 WORKDIR /app
 COPY --from=builder /src/main ./
-
 ENTRYPOINT ["/app/main"]
