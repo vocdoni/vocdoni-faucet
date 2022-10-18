@@ -17,7 +17,7 @@ for requesting such tokens.
 
 ## Build
 
-Compile from source in a golang environment (Go>1.17 required):
+Compile from source in a golang environment (Go>1.18 required):
 
 ```
 git clone https://go.vocdoni.io/vocdoni-faucet.git
@@ -58,7 +58,7 @@ Options:
 
     `curl -X GET https://foo.bar/faucet/vocdoni/<network>/<from>`
 
-    - `<network>` one of `[vocdoniDev, vocdoniStage, vocdoniAzeno]`
+    - `<network>` one of `[dev, stage, azeno]`
     - `<from>` an EVM address (i.e `0xeD33259a056F4fb449FFB7B7E2eCB43a9B5685Bf`)
 
 - Response (Vocdoni)
