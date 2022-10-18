@@ -37,10 +37,7 @@ func EVMSpecsFor(name string) (*EVMSpecs, error) {
 
 // TODO: add Sepolia network
 
-// AvailableEVMChains is the list of supported ethereum networks / environments
 var (
-	AvailableEVMChains = []string{"mainnet", "goerli", "gnosisChain", "matic", "mumbai", "evmtest", "sepolia"}
-
 	mainnet = EVMSpecs{
 		Name:      "mainnet",
 		NetworkID: 1,
