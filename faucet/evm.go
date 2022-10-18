@@ -26,9 +26,8 @@ type EVM struct {
 	chainID int
 	// amount of tokens to be transferred
 	amount uint64
-	// Endpoints to connect with
+	// endpoints to connect with
 	endpoints []string
-
 	// client client instance connected to an endpoint
 	client *evmClient.Client
 	// signers pool of signers
@@ -37,9 +36,11 @@ type EVM struct {
 	timeout time.Duration
 	// sendConditions conditions to meet before sending faucet tokens
 	sendConditions *sendConditions
-	forTest        bool
-	testBackend    *evmTestBackend
 	lock           sync.RWMutex
+
+	// for testing purposes
+	forTest     bool
+	testBackend *evmTestBackend
 }
 
 // NewEVM returns an EVM instance
@@ -59,6 +60,13 @@ func (e *EVM) Signers() []*Signer {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	return e.signers
+}
+
+// Network returns the faucet EVM network
+func (e *EVM) Network() string {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	return e.network
 }
 
 func (e *EVM) setSendConditions(balance uint64, challenge bool) {
@@ -188,7 +196,14 @@ func (e *EVM) ClientBalanceAt(ctx context.Context,
 	address evmcommon.Address,
 	blockNumber *big.Int,
 ) (*big.Int, error) {
-	return e.balanceAt(ctx, address, blockNumber)
+	if e == nil {
+		if err := e.NewClient(ctx); err != nil {
+			return nil, err
+		}
+	}
+	tctx, cancel := context.WithTimeout(ctx, e.timeout)
+	defer cancel()
+	return e.balanceAt(tctx, address, blockNumber)
 }
 
 // ClientChainID returns the chainID that the client reports
@@ -197,19 +212,29 @@ func (e *EVM) ClientChainID(ctx context.Context) (*big.Int, error) {
 	if e.forTest {
 		return e.testBackend.Backend.Blockchain().Config().ChainID, nil
 	}
+	if e.client == nil {
+		if err := e.NewClient(ctx); err != nil {
+			return nil, err
+		}
+	}
 	tctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 	return e.client.ChainID(tctx)
 }
 
-func (e *EVM) checkTxStatus(txHash *evmcommon.Hash) (uint64, error) {
-	tctx, cancel := context.WithTimeout(context.Background(), e.timeout)
-	defer cancel()
+func (e *EVM) checkTxStatus(ctx context.Context, txHash *evmcommon.Hash) (uint64, error) {
 	var receipt *evmtypes.Receipt
 	var err error
 	if e.forTest {
-		receipt, err = e.testBackend.Backend.TransactionReceipt(tctx, *txHash)
+		receipt, err = e.testBackend.Backend.TransactionReceipt(ctx, *txHash)
 	} else {
+		if e.client == nil {
+			if err := e.NewClient(ctx); err != nil {
+				return 0, err
+			}
+		}
+		tctx, cancel := context.WithTimeout(ctx, e.timeout)
+		defer cancel()
 		receipt, err = e.client.TransactionReceipt(tctx, *txHash)
 	}
 	if err != nil {
@@ -246,6 +271,11 @@ func (e *EVM) sendTokens(ctx context.Context,
 			return nil, fmt.Errorf("error creating tx: %s", err)
 		}
 	} else {
+		if e.client == nil {
+			if err := e.NewClient(ctx); err != nil {
+				return nil, err
+			}
+		}
 		nonce, err = e.client.PendingNonceAt(tctx, e.signers[signerIndex].SignKeys.Address())
 		if err != nil {
 			return nil, fmt.Errorf("error creating tx: %s", err)
@@ -307,7 +337,9 @@ func (e *EVM) sendTokens(ctx context.Context,
 // SendTokens sends an amount to an address if the address meets the send conditions
 func (e *EVM) SendTokens(ctx context.Context, to evmcommon.Address) (*evmcommon.Hash, error) {
 	if e.client == nil && !e.forTest {
-		return nil, fmt.Errorf("cannot send tokens, invalid Ethereum client")
+		if err := e.NewClient(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	// check to address meet sendConditions
@@ -355,7 +387,9 @@ func (e *EVM) SendTokens(ctx context.Context, to evmcommon.Address) (*evmcommon.
 				txHash.String(),
 				nonce,
 			)
-			go e.waitForTx(txHash, signerIndex)
+			tctx3, cancel3 := context.WithTimeout(ctx, e.timeout)
+			defer cancel3()
+			go e.waitForTx(tctx3, txHash, signerIndex)
 			finished = true
 			break
 		}
@@ -368,10 +402,10 @@ func (e *EVM) SendTokens(ctx context.Context, to evmcommon.Address) (*evmcommon.
 	return txHash, nil
 }
 
-func (e *EVM) waitForTx(txHash *evmcommon.Hash, signerIndex int) {
+func (e *EVM) waitForTx(ctx context.Context, txHash *evmcommon.Hash, signerIndex int) {
 	// wait until tx status is available, means tx is already mined
 	for {
-		status, err := e.checkTxStatus(txHash)
+		status, err := e.checkTxStatus(ctx, txHash)
 		if err != nil {
 			if err == goethereum.NotFound {
 				// wait and check again
