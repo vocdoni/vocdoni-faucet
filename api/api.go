@@ -67,6 +67,8 @@ func NewAPI() *API {
 func (a *API) Init(router *httprouter.HTTProuter,
 	baseRoute,
 	whitelist string,
+	enableEVM,
+	enableVocdoni bool,
 	vfaucet *faucet.Vocdoni,
 	efaucet *faucet.EVM,
 ) error {
@@ -95,28 +97,32 @@ func (a *API) Init(router *httprouter.HTTProuter,
 	// attach faucet modules
 	a.attach(vfaucet, efaucet)
 	// enable handlers
-	if err := a.enableFaucetHandlers(); err != nil {
+	if err := a.enableFaucetHandlers(enableEVM, enableVocdoni); err != nil {
 		return fmt.Errorf("cannot enable handlers %w", err)
 	}
 	return nil
 }
 
-func (a *API) enableFaucetHandlers() error {
-	if err := a.api.RegisterMethod(
-		"/evm/{network}/{from}",
-		"GET",
-		bearerstdapi.MethodAccessTypePrivate,
-		a.faucetHandler,
-	); err != nil {
-		return err
+func (a *API) enableFaucetHandlers(enableEVM, enableVocdoni bool) error {
+	if enableEVM {
+		if err := a.api.RegisterMethod(
+			"/evm/{network}/{from}",
+			"GET",
+			bearerstdapi.MethodAccessTypePrivate,
+			a.faucetHandler,
+		); err != nil {
+			return err
+		}
 	}
-	if err := a.api.RegisterMethod(
-		"/vocdoni/{network}/{from}",
-		"GET",
-		bearerstdapi.MethodAccessTypePrivate,
-		a.faucetHandler,
-	); err != nil {
-		return err
+	if enableVocdoni {
+		if err := a.api.RegisterMethod(
+			"/vocdoni/{network}/{from}",
+			"GET",
+			bearerstdapi.MethodAccessTypePrivate,
+			a.faucetHandler,
+		); err != nil {
+			return err
+		}
 	}
 	return nil
 }

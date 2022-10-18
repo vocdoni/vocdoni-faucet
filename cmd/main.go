@@ -65,7 +65,15 @@ func main() {
 
 	// init api
 	a := api.NewAPI()
-	if err := a.Init(&httpRouter, cfg.API.Route, cfg.API.AllowedAddrs, v, e); err != nil {
+	if err := a.Init(
+		&httpRouter,
+		cfg.API.Route,
+		cfg.API.AllowedAddrs,
+		cfg.Faucet.EnableEVM,
+		cfg.Faucet.EnableVocdoni,
+		v,
+		e,
+	); err != nil {
 		log.Fatal(err)
 	}
 	log.Infof("API available at %s", cfg.API.Route)

@@ -74,7 +74,7 @@ func TestAPI(t *testing.T) {
 	// api whitelist
 	token, err := uuid.NewUUID()
 	qt.Assert(t, err, qt.IsNil)
-	qt.Assert(t, api.Init(&router, "/faucet", token.String(), v, e), qt.IsNil)
+	qt.Assert(t, api.Init(&router, "/faucet", token.String(), true, true, v, e), qt.IsNil)
 	c := newTestHTTPclient(t, addr, &token)
 
 	// create vocdoni request
