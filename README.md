@@ -41,7 +41,8 @@ Options:
 - `--evmEndpoints` **stringArray**     evm endpoints to connect with (requied for the evm faucet)
 - `--evmNetwork` **string**            one of the available evm chains
 - `--evmPrivKeys` **stringArray**      hexString privKeys for EVM faucet accounts
-- `--faucetAmount` **uint**            faucet amount (default 100)
+- `--faucetEVMAmount` **uint**         evm faucet amount in wei (1000000000000000000 == 1 ETH) (default 1)
+- `--faucetVocdoniAmount` **uint**     vocdoni faucet amount (default 100)
 - `--faucetAmountThreshold` **uint**   minimum amount threshold for transfer (default 100)
 - `--faucetEnableChallenge`            if true a faucet challenge must be solved
 - `--logErrorFile` **string**          log errors and warnings to a file
