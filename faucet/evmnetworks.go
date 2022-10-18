@@ -2,17 +2,15 @@ package faucet
 
 import (
 	evmparams "github.com/ethereum/go-ethereum/params"
-	"go.vocdoni.io/proto/build/go/models"
 )
 
 // EVMSpecs defines a set of EVM blockchain network specifications
 type EVMSpecs struct {
-	Name, // Identity name
+	Name, // Network name
 	GenesisB64, // Base64 JSON encoded genesis file
-	GenesisHash string // Genesis Hash
-	BootNodes     []string // List of Bootnodes for this network
-	NetworkID     int      // Ethereum Like network identification number
-	NetworkSource models.SourceNetworkId
+	GenesisHash string // Genesis hash
+	BootNodes []string // List of bootnodes for this network
+	NetworkID int      // Ethereum like network identification number
 }
 
 // EVMSpecsFor returns the specs for the given EVM blockchain network name
@@ -22,6 +20,8 @@ func EVMSpecsFor(name string) (*EVMSpecs, error) {
 		return &mainnet, nil
 	case "goerli":
 		return &goerli, nil
+	case "sepolia":
+		return &sepolia, nil
 	case "gnosisChain":
 		return &gnosisChain, nil
 	case "matic":
@@ -39,49 +39,37 @@ func EVMSpecsFor(name string) (*EVMSpecs, error) {
 
 // AvailableEVMChains is the list of supported ethereum networks / environments
 var (
-	AvailableEVMChains = []string{"mainnet", "goerli", "gnosisChain", "matic", "mumbai", "evmtest"}
+	AvailableEVMChains = []string{"mainnet", "goerli", "gnosisChain", "matic", "mumbai", "evmtest", "sepolia"}
 
 	mainnet = EVMSpecs{
-		Name:          "mainnet",
-		NetworkID:     1,
-		BootNodes:     evmparams.MainnetBootnodes,
-		NetworkSource: models.SourceNetworkId_ETH_MAINNET,
+		Name:      "mainnet",
+		NetworkID: 1,
 	}
-
 	gnosisChain = EVMSpecs{
-		Name:          "gnosisChain",
-		NetworkID:     100,
-		BootNodes:     nil,
-		NetworkSource: models.SourceNetworkId_POA_XDAI,
+		Name:      "gnosisChain",
+		NetworkID: 100,
 	}
-
 	matic = EVMSpecs{
-		Name:          "matic",
-		NetworkID:     137,
-		BootNodes:     nil,
-		NetworkSource: models.SourceNetworkId_POLYGON,
+		Name:      "matic",
+		NetworkID: 137,
 	}
-
 	mumbai = EVMSpecs{
-		Name:          "mumbai",
-		NetworkID:     80001,
-		BootNodes:     nil,
-		NetworkSource: models.SourceNetworkId_POLYGON_MUMBAI,
+		Name:      "mumbai",
+		NetworkID: 80001,
 	}
-
 	test = EVMSpecs{
-		Name:          "evmtest",
-		NetworkID:     1337,
-		BootNodes:     nil,
-		NetworkSource: models.SourceNetworkId_UNKNOWN,
+		Name:      "evmtest",
+		NetworkID: 1337,
 	}
-
+	sepolia = EVMSpecs{
+		Name:      "sepolia",
+		NetworkID: 11155111,
+	}
 	goerli = EVMSpecs{
-		Name:          "goerli",
-		NetworkID:     5,
-		BootNodes:     evmparams.GoerliBootnodes,
-		NetworkSource: models.SourceNetworkId_ETH_GOERLI,
-		GenesisHash:   "0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a",
+		Name:        "goerli",
+		NetworkID:   5,
+		BootNodes:   evmparams.GoerliBootnodes,
+		GenesisHash: "0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a",
 		GenesisB64: `ewogICJjb25maWciOnsKICAgICJjaGFpbklkIjo1LAogICAgImhvbWVzdGVhZEJsb2NrIjowLAog
 ICAgImVpcDE1MEJsb2NrIjowLAogICAgImVpcDE1MEhhc2giOiAiMHhiZjdlMzMxZjdmN2MxZGQy
 ZTA1MTU5NjY2YjNiZjhiYzdhOGEzYTllYjFkNTE4OTY5ZWFiNTI5ZGQ5Yjg4YzFhIiwKICAgICJl
