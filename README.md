@@ -54,11 +54,11 @@ Options:
 
 ## API
 
-- Request
+- Request (Vocdoni)
 
-    `curl -X GET https://foo.bar/faucet/<network>/<from>`
+    `curl -X GET https://foo.bar/faucet/vocdoni/<network>/<from>`
 
-    - `<network>` one of `[mainnet, vocdoniDev, vocdoniStage, vocdoniAzeno, goerli, sepolia, matic, mumbai, gnosisChain, evmtest]`
+    - `<network>` one of `[vocdoniDev, vocdoniStage, vocdoniAzeno]`
     - `<from>` an EVM address (i.e `0xeD33259a056F4fb449FFB7B7E2eCB43a9B5685Bf`)
 
 - Response (Vocdoni)
@@ -79,6 +79,13 @@ Options:
         "error": "Message goes here"
     }
     ```
+
+- Request (EVM)
+
+    `curl -X GET https://foo.bar/faucet/evm/<network>/<from>`
+
+    - `<network>` one of `[mainnet, goerli, sepolia, matic, mumbai, gnosisChain, evmtest]`
+    - `<from>` an EVM address (i.e `0xeD33259a056F4fb449FFB7B7E2eCB43a9B5685Bf`)
 
 - Response (EVM)
 
