@@ -162,13 +162,13 @@ func (cfg *Config) InitConfig() error {
 
 	// binding flags to viper
 	// logging
-	if err := viper.BindPFlag("logLevel", pflag.Lookup("logLevel")); err != nil {
+	if err := viper.BindPFlag("log.Level", pflag.Lookup("logLevel")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
-	if err := viper.BindPFlag("logErrorFile", pflag.Lookup("logErrorFile")); err != nil {
+	if err := viper.BindPFlag("log.ErrorFile", pflag.Lookup("logErrorFile")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
-	if err := viper.BindPFlag("logOutput", pflag.Lookup("logOutput")); err != nil {
+	if err := viper.BindPFlag("log.Output", pflag.Lookup("logOutput")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
 	// common
