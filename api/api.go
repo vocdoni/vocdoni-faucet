@@ -129,8 +129,15 @@ func (a *API) attach(vocdoniFaucet *faucet.Vocdoni, EVMFaucet *faucet.EVM) {
 	a.evmFaucet = EVMFaucet
 }
 
-func (a *API) networkParse(network string) faucet.FaucetNetworks {
-	return faucet.SupportedFaucetNetworksMap[network]
+func (a *API) networkParse(network, origin string) faucet.FaucetNetworks {
+	switch origin {
+	case EVM:
+		return faucet.EVMSupportedFaucetNetworksMap[network]
+	case Vocdoni:
+		return faucet.VocdoniSupportedFaucetNetworksMap[network]
+	default:
+		return faucet.FaucetNetworksUndefined
+	}
 }
 
 func (a *API) fromParse(from string) (*common.Address, error) {
@@ -159,7 +166,8 @@ func (a *API) faucetHandler(msg *bearerstdapi.BearerStandardAPIdata,
 		return ErrInvalidToken
 	}
 	// get network url param
-	network := a.networkParse(ctx.URLParam("network"))
+	origin := strings.Split(ctx.Request.URL.Path, "/")
+	network := a.networkParse(ctx.URLParam("network"), origin[1])
 	// get from url param
 	from, err := a.fromParse(ctx.URLParam("from"))
 	if err != nil {
@@ -190,7 +198,7 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 	network faucet.FaucetNetworks,
 	from common.Address,
 ) error {
-	if faucet.SupportedFaucetNetworksMap[a.evmFaucet.Network()] != network {
+	if faucet.EVMSupportedFaucetNetworksMap[a.evmFaucet.Network()] != network {
 		return fmt.Errorf("unavailable network")
 	}
 	txHash, err := a.evmFaucet.SendTokens(context.Background(), from)
@@ -213,7 +221,7 @@ func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 	network faucet.FaucetNetworks,
 	from common.Address,
 ) error {
-	if faucet.SupportedFaucetNetworksMap[a.vocdoniFaucet.Network()] != network {
+	if faucet.VocdoniSupportedFaucetNetworksMap[a.vocdoniFaucet.Network()] != network {
 		return fmt.Errorf("unavailable network")
 	}
 	faucetPackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
