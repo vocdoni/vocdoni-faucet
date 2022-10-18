@@ -50,6 +50,11 @@ func (v *Vocdoni) Signer() *ethereum.SignKeys {
 	return v.signer
 }
 
+// Network returns the faucet vocdoni network
+func (v *Vocdoni) Network() string {
+	return v.network
+}
+
 func (v *Vocdoni) setAmount(amount uint64) error {
 	if amount == 0 && amount == v.amount {
 		return ErrInvalidAmount

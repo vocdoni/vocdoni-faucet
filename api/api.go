@@ -190,6 +190,9 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 	network faucet.FaucetNetworks,
 	from common.Address,
 ) error {
+	if faucet.SupportedFaucetNetworksMap[a.evmFaucet.Network()] != network {
+		return fmt.Errorf("unavailable network")
+	}
 	txHash, err := a.evmFaucet.SendTokens(context.Background(), from)
 	if err != nil {
 		return fmt.Errorf("error sending evm tokens: %s", err)
@@ -210,6 +213,9 @@ func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 	network faucet.FaucetNetworks,
 	from common.Address,
 ) error {
+	if faucet.SupportedFaucetNetworksMap[a.vocdoniFaucet.Network()] != network {
+		return fmt.Errorf("unavailable network")
+	}
 	faucetPackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
 	if err != nil {
 		return fmt.Errorf("error sending evm tokens: %s", err)
