@@ -35,7 +35,7 @@ var (
 		EVMPrivKeys:  []string{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
 		EVMEndpoints: []string{"localhost:8545"},
 		EVMTimeout:   10,
-		SendConditions: config.SendConditionsConfig{
+		EVMSendConditions: config.SendConditionsConfig{
 			Balance:   100,
 			Challenge: false,
 		},
@@ -44,7 +44,7 @@ var (
 		VocdoniAmount:  100,
 		VocdoniNetwork: "dev",
 		VocdoniPrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-		SendConditions: config.SendConditionsConfig{
+		VocdoniSendConditions: config.SendConditionsConfig{
 			Balance:   100,
 			Challenge: false,
 		},

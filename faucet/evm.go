@@ -157,7 +157,7 @@ func (e *EVM) Init(ctx context.Context, evmConfig *config.FaucetConfig) error {
 	e.timeout = evmConfig.EVMTimeout
 
 	// set send conditions
-	e.setSendConditions(evmConfig.SendConditions.Balance, evmConfig.SendConditions.Challenge)
+	e.setSendConditions(evmConfig.EVMSendConditions.Balance, evmConfig.EVMSendConditions.Challenge)
 
 	return nil
 }

@@ -84,7 +84,10 @@ func (v *Vocdoni) Init(ctx context.Context, vocdoniConfig *config.FaucetConfig) 
 	}
 
 	// set send conditions
-	v.setSendConditions(vocdoniConfig.SendConditions.Balance, vocdoniConfig.SendConditions.Challenge)
+	v.setSendConditions(
+		vocdoniConfig.VocdoniSendConditions.Balance,
+		vocdoniConfig.VocdoniSendConditions.Challenge,
+	)
 
 	return nil
 }

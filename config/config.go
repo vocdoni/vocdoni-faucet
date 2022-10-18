@@ -45,7 +45,8 @@ type FaucetConfig struct {
 	// EVMTimeout faucet global timeout for EVM operations in seconds
 	EVMTimeout time.Duration
 	// SendConditions config for sendConditions
-	SendConditions SendConditionsConfig
+	EVMSendConditions     SendConditionsConfig
+	VocdoniSendConditions SendConditionsConfig
 }
 
 // SendConditionsConfig represents the send conditions of the faucet configuration
@@ -116,15 +117,25 @@ func (cfg *Config) InitConfig() error {
 		"evm faucet amount in wei (1000000000000000000 == 1 ETH)",
 	)
 	cfg.Faucet.VocdoniAmount = *pflag.Uint64("faucetVocdoniAmount", 100, "vocdoni faucet amount")
-	cfg.Faucet.SendConditions.Balance = *pflag.Uint64(
-		"faucetAmountThreshold",
-		100,
-		"minimum amount threshold for transfer",
+	cfg.Faucet.EVMSendConditions.Balance = *pflag.Uint64(
+		"faucetEVMAmountThreshold",
+		1,
+		"minimum EVM amount threshold for transfer",
 	)
-	cfg.Faucet.SendConditions.Challenge = *pflag.Bool(
-		"faucetEnableChallenge",
+	cfg.Faucet.EVMSendConditions.Challenge = *pflag.Bool(
+		"faucetEVMEnableChallenge",
 		false,
-		"if true a faucet challenge must be solved",
+		"if true a EVM faucet challenge must be solved",
+	)
+	cfg.Faucet.VocdoniSendConditions.Balance = *pflag.Uint64(
+		"faucetVocdoniAmountThreshold",
+		100,
+		"minimum vocdoni amount threshold for transfer",
+	)
+	cfg.Faucet.VocdoniSendConditions.Challenge = *pflag.Bool(
+		"faucetVocdoniEnableChallenge",
+		false,
+		"if true a vocdoni faucet challenge must be solved",
 	)
 	// api
 	cfg.API.Route = *pflag.String("apiRoute", "/", "dvote API route")
@@ -196,14 +207,26 @@ func (cfg *Config) InitConfig() error {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
 	if err := viper.BindPFlag(
-		"faucet.SendConditions.Balance",
-		pflag.Lookup("faucetAmountThreshold"),
+		"faucet.EVMSendConditions.Balance",
+		pflag.Lookup("faucetEVMAmountThreshold"),
 	); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
 	if err := viper.BindPFlag(
-		"faucet.SendConditions.Challenge",
-		pflag.Lookup("faucetEnableChallenge"),
+		"faucet.EVMSendConditions.Challenge",
+		pflag.Lookup("faucetEVMEnableChallenge"),
+	); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag(
+		"faucet.VocdoniSendConditions.Balance",
+		pflag.Lookup("faucetVocdoniAmountThreshold"),
+	); err != nil {
+		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
+	}
+	if err := viper.BindPFlag(
+		"faucet.VocdoniSendConditions.Challenge",
+		pflag.Lookup("faucetVocdoniEnableChallenge"),
 	); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}

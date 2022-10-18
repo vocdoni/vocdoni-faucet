@@ -11,7 +11,10 @@ faucet:
     evmendpoints: []
     evmnetwork: ""
     evmprivkeys: []
-    sendconditions:
+    evmsendconditions:
+        balance: "100"
+        challenge: false
+    vocdonisendconditions:
         balance: "100"
         challenge: false
     vocdoniamount: "100"
