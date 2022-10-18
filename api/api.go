@@ -21,6 +21,8 @@ import (
 const (
 	EVM     = "evm"
 	Vocdoni = "vocdoni"
+	// Maximum number of requests a whitelisted caller can do
+	MaxRequest = 10000
 )
 
 var (
@@ -88,7 +90,7 @@ func (a *API) Init(router *httprouter.HTTProuter,
 	// add whitelisted bearer tokens
 	bearerWhitelist := strings.Split(whitelist, ",")
 	for _, token := range bearerWhitelist {
-		a.api.AddAuthToken(token, 0) // 0 means no limit
+		a.api.AddAuthToken(token, int64(MaxRequest))
 	}
 	// attach faucet modules
 	a.attach(vfaucet, efaucet)
