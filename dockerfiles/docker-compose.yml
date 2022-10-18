@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   faucet:
-    image: ghcr.io/vocdoni/faucet:${FAUCET_TAG:-master}
+    image: ghcr.io/vocdoni/vocdoni-faucet:${FAUCET_TAG:-master}
     env_file: ".env"
     sysctls:
       net.core.somaxconn: 8128
