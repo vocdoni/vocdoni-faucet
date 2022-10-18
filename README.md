@@ -2,6 +2,8 @@
 
 [![GoDoc](https://godoc.org/go.vocdoni.io/vocdoni-faucet?status.svg)](https://godoc.org/go.vocdoni.io/vocdoni-faucet)
 [![Go Report Card](https://goreportcard.com/badge/go.vocdoni.io/vocdoni-faucet)](https://goreportcard.com/report/go.vocdoni.io/vocdoni-faucet)
+[![Coverage Status](https://coveralls.io/repos/github/vocdoni/vocdoni-faucet/badge.svg)](https://coveralls.io/github/vocdoni/vocdoni-faucet)
+
 
 [![Join Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/4hKeArDaU2)
 [![Twitter Follow](https://img.shields.io/twitter/follow/vocdoni.svg?style=social&label=Follow)](https://twitter.com/vocdoni)
@@ -54,30 +56,19 @@ Options:
 
 - Request
 
-    `curl -X POST https://foo.bar/faucet`
+    `curl -X GET https://foo.bar/faucet/<network>/<from>`
 
-- Request body (Vocdoni)
+    - `<network>` one of `[mainnet, vocdoniDev, vocdoniStage, vocdoniAzeno, goerli, sepolia, matic, mumbai, gnosisChain, evmtest]`
+    - `<from>` an EVM address (i.e `0xeD33259a056F4fb449FFB7B7E2eCB43a9B5685Bf`)
 
-    ```json
-    {
-        "network": "vocdoni",
-        "from": "0x0000000000000000000000000000000000000000",
-    }
-    ```
 - Response (Vocdoni)
 
     HTTP 200
 
     ```json
     {
-        "faucetPackage":{
-            "payload": {
-                "identifier": 7499402340572247695,
-                "to": "0x0000000000000000000000000000000000000000",
-                "amount": 100
-            },
-            "signature": "0x123"
-        }
+        "amount": 100,
+        "faucetPackage": "0xabc" // faucet package bytes
     }
     ```
 
@@ -89,21 +80,13 @@ Options:
     }
     ```
 
-- Request body (EVM)
-
-    ```json
-    {
-        "network": "evm",
-        "from": "0x0000000000000000000000000000000000000000",
-    }
-    ```
-
 - Response (EVM)
 
     HTTP 200
 
     ```json
     {
+        "amount": 100,
         "txHash": "0x123"
     }
     ```
