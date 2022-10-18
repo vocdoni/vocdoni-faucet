@@ -47,19 +47,24 @@ var (
 	// ErrInvalidSigner error wrapping invalid signer errors
 	ErrInvalidSigner error = errors.New("invalid signer")
 
-	// SupportedFaucetNetworksMap have all the networks the faucet supports
-	SupportedFaucetNetworksMap = map[string]FaucetNetworks{
-		"undefined":    FaucetNetworksUndefined,
-		"mainnet":      FaucetNetworksEthereum,
-		"vocdoniDev":   FaucetNetworksVocdoniDev,
-		"vocdoniStage": FaucetNetworksVocdoniStage,
-		"vocdoniAzeno": FaucetNetworksVocdoniAzeno,
-		"goerli":       FaucetNetworksGoerli,
-		"sepolia":      FaucetNetworksSepolia,
-		"matic":        FaucetNetworksMatic,
-		"mumbai":       FaucetNetworksMumbai,
-		"gnosisChain":  FaucetNetworksGnosisChain,
-		"evmtest":      FaucetNetworksEVMTest,
+	// EVMSupportedFaucetNetworksMap have all the networks the faucet supports
+	EVMSupportedFaucetNetworksMap = map[string]FaucetNetworks{
+		"undefined":   FaucetNetworksUndefined,
+		"mainnet":     FaucetNetworksEthereum,
+		"goerli":      FaucetNetworksGoerli,
+		"sepolia":     FaucetNetworksSepolia,
+		"matic":       FaucetNetworksMatic,
+		"mumbai":      FaucetNetworksMumbai,
+		"gnosisChain": FaucetNetworksGnosisChain,
+		"evmtest":     FaucetNetworksEVMTest,
+	}
+
+	// VocdoniSupportedFaucetNetworksMap have all the networks the faucet supports
+	VocdoniSupportedFaucetNetworksMap = map[string]FaucetNetworks{
+		"undefined": FaucetNetworksUndefined,
+		"dev":       FaucetNetworksVocdoniDev,
+		"stage":     FaucetNetworksVocdoniStage,
+		"azeno":     FaucetNetworksVocdoniAzeno,
 	}
 )
 
