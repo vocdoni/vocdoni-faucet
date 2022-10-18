@@ -2,8 +2,7 @@
 
 [![GoDoc](https://godoc.org/go.vocdoni.io/vocdoni-faucet?status.svg)](https://godoc.org/go.vocdoni.io/vocdoni-faucet)
 [![Go Report Card](https://goreportcard.com/badge/go.vocdoni.io/vocdoni-faucet)](https://goreportcard.com/report/go.vocdoni.io/vocdoni-faucet)
-[![Coverage Status](https://coveralls.io/repos/github/vocdoni/vocdoni-faucet/badge.svg)](https://coveralls.io/github/vocdoni/vocdoni-faucet)
-
+[![Coverage Status](https://coveralls.io/repos/github/vocdoni/vocdoni-faucet/badge.svg?branch=master)](https://coveralls.io/github/vocdoni/vocdoni-faucet?branch=master)
 
 [![Join Discord](https://img.shields.io/badge/discord-join%20chat-blue.svg)](https://discord.gg/4hKeArDaU2)
 [![Twitter Follow](https://img.shields.io/twitter/follow/vocdoni.svg?style=social&label=Follow)](https://twitter.com/vocdoni)
