@@ -167,7 +167,7 @@ func (a *API) faucetHandler(msg *bearerstdapi.BearerStandardAPIdata,
 	}
 	// get network url param
 	origin := strings.Split(ctx.Request.URL.Path, "/")
-	network := a.networkParse(ctx.URLParam("network"), origin[1])
+	network := a.networkParse(ctx.URLParam("network"), origin[2])
 	// get from url param
 	from, err := a.fromParse(ctx.URLParam("from"))
 	if err != nil {
