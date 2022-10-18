@@ -42,7 +42,7 @@ var (
 	}
 	vConfig = &config.FaucetConfig{
 		VocdoniAmount:  100,
-		VocdoniNetwork: "vocdoniDev",
+		VocdoniNetwork: "dev",
 		VocdoniPrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		SendConditions: config.SendConditionsConfig{
 			Balance:   100,
@@ -78,7 +78,7 @@ func TestAPI(t *testing.T) {
 	c := newTestHTTPclient(t, addr, &token)
 
 	// create vocdoni request
-	resp, code := c.request("GET", nil, "vocdoni", "vocdoniDev", randomEVMAddress.Hex())
+	resp, code := c.request("GET", nil, "vocdoni", "dev", randomEVMAddress.Hex())
 	qt.Assert(t, code, qt.Equals, 200)
 	respData := &faucetapi.FaucetResponse{}
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)

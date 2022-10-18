@@ -25,7 +25,7 @@ var (
 	}
 	vConfig = &config.FaucetConfig{
 		VocdoniAmount:  100,
-		VocdoniNetwork: "vocdoniDev",
+		VocdoniNetwork: "dev",
 		VocdoniPrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		SendConditions: config.SendConditionsConfig{
 			Balance:   100,
@@ -157,7 +157,7 @@ func TestNewVocdoni(t *testing.T) {
 	vConfig1.VocdoniNetwork = "invalid"
 	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.ErrorIs, faucet.ErrInvalidNetwork)
 	// should not accept an invalid amout
-	vConfig1.VocdoniNetwork = "vocdoniDev"
+	vConfig1.VocdoniNetwork = "dev"
 	vConfig1.VocdoniAmount = 0
 	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.ErrorIs, faucet.ErrInvalidAmount)
 	// should not accept an invalid priv key

@@ -13,14 +13,6 @@ import (
 	"go.vocdoni.io/vocdoni-faucet/config"
 )
 
-// AvailableVocdoniChains is the list of supported vocdoni networks / environments
-var (
-	AvailableVocdoniChains = []string{"azeno", "stage", "dev"}
-	azeno                  = vocdoniSpecs{network: "vocdoniAzeno", networkID: "azeno"}
-	stage                  = vocdoniSpecs{network: "vocdoniStage", networkID: "stage"}
-	dev                    = vocdoniSpecs{network: "vocdoniDev", networkID: "dev"}
-)
-
 // Vocdoni contains all components required for the Vocdoni faucet
 type Vocdoni struct {
 	// network name of the network
@@ -111,6 +103,12 @@ func (v *Vocdoni) GenerateFaucetPackage(address evmcommon.Address) (*models.Fauc
 	)
 }
 
+var (
+	azeno = vocdoniSpecs{network: "azeno", networkID: "azeno"}
+	stage = vocdoniSpecs{network: "stage", networkID: "stage"}
+	dev   = vocdoniSpecs{network: "dev", networkID: "dev"}
+)
+
 // vocdoniSpecs defines a set of Vocdoni blockchain network specifications
 type vocdoniSpecs struct {
 	network   string
@@ -120,11 +118,11 @@ type vocdoniSpecs struct {
 // VocdoniSpecsFor returns the specs for the given Vocdoni blockchain network name
 func vocdoniSpecsFor(name string) (*vocdoniSpecs, error) {
 	switch name {
-	case "vocdoniAzeno":
+	case "azeno":
 		return &azeno, nil
-	case "vocdoniStage":
+	case "stage":
 		return &stage, nil
-	case "vocdoniDev":
+	case "dev":
 		return &dev, nil
 	default:
 		return nil, ErrInvalidNetwork
