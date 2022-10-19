@@ -29,30 +29,30 @@ go build ./cmd/main.go
 `go run ./cmd/main.go`
 
 Options:
-- `--apiListenHost` **string**              API endpoint listen address (default "0.0.0.0")
-- `--apiListenPort` **int**                 API endpoint http port (default 8000)
-- `--apiRoute` **string**                   dvote API route (default "/")
-- `--apiTLSDomain` **string**               enable TLS secure API domain with LetsEncrypt auto-generated certificate
-- `--dataDir` **string**                    directory where data is stored (default "/home/me/.faucet")
-- `--enableEVM`                             enable evm faucet (default true)
-- `--enableMetrics`                         enable prometheus metrics (default true)
-- `--enableVocdoni`                         enable vocdoni faucet (default true)
-- `--evmEndpoints` **stringArray**          evm endpoints to connect with (requied for the evm faucet)
-- `--evmNetwork` **string**                 one of the available evm chains
-- `--evmPrivKeys` **stringArray**           hexString privKeys for EVM faucet accounts
-- `--faucetEVMAmount` **uint**              evm faucet amount in wei (1000000000000000000 == 1 ETH) (default 1)
-- `--faucetVocdoniAmount` **uint**          vocdoni faucet amount (default 100)
-- `--faucetEVMAmountThreshold` **uint**     minimum EVM amount threshold for transfer (default 1)
-- `--faucetEVMEnableChallenge`              if true a EVM faucet challenge must be solved
-- `--faucetVocdoniAmountThreshold` **uint** minimum vocdoni amount threshold for transfer (default 100)
-- `--faucetVocdoniEnableChallenge`          if true a vocdoni faucet challenge must be solved
-- `--logErrorFile` **string**               log errors and warnings to a file
-- `--logLevel` **string**                   log level (debug, info, warn, error, fatal) (default "info")
-- `--logOutput` **string**                  log output (stdout, stderr or filepath) (default "stdout")
-- `--metricsRefreshInterval` **int**        metrics refresh interval in seconds (default 10)
-- `--saveConfig`                            overwrites an existing config file with the CLI provided flags
-- `--vocdoniNetwork` **string**             one of the available vocdoni networks
-- `--vocdoniPrivKey` **string**             hexString privKeys for vocdoni faucet accounts
+
+- `--apiListenHost` **string**                API endpoint listen address (default "0.0.0.0")
+- `--apiListenPort` **int**                   API endpoint http port (default 8000)
+- `--apiRoute` **string**                     dvote API route (default "/")
+- `--apiTLSDomain` **string**                 enaapiLle TLS secure API domain with LetsEncrypt auto-generated certificate
+- `--apiWhitelist` **string**                 bearer token whitelist for accepting requests (comma separated string)
+- `--dataDir` **string**                      directory where data is stored (default "/home/me/.faucet")
+- `--enableEVM` **bool**                      enable evm faucet (default true)
+- `--enableVocdoni` **bool**                  enable vocdoni faucet (default true)
+- `--evmEndpoints` **stringArray**            evm endpoints to connect with (requied for the evm faucet)
+- `--evmNetwork` **string**                   one of the available evm chains
+- `--evmPrivKeys` **stringArray**             hexString privKeys for EVM faucet accounts
+- `--faucetEVMAmount` **uint**                evm faucet amount in wei (1000000000000000000 == 1 ETH) (default 1)
+- `--faucetEVMAmountThreshold` **uint**       minimum EVM amount threshold for transfer (default 1)
+- `--faucetEVMEnableChallenge` **bool**       if true a EVM faucet challenge must be solved
+- `--faucetVocdoniAmount` **uint**            vocdoni faucet amount (default 100)
+- `--faucetVocdoniAmountThreshold` **uint**   minimum vocdoni amount threshold for transfer (default 100)
+- `--faucetVocdoniEnableChallenge` **bool**   if true a vocdoni faucet challenge must be solved
+- `--logErrorFile` **string**                 log errors and warnings to a file
+- `--logLevel` **string**                     log level (debug, info, warn, error, fatal) (default "info")
+- `--logOutput` **string**                    log output (stdout, stderr or filepath) (default "stdout")
+- `--saveConfig` **bool**                     overwrites an existing config file with the CLI provided flags
+- `--vocdoniNetwork` **string**               one of the available vocdoni networks
+- `--vocdoniPrivKey` **string**               hexString privKeys for vocdoni faucet accounts
 
 ## API
 
