@@ -15,6 +15,7 @@
 env.local
 run
 env
+dockerfiles/letsencrypt
 
 # VSCode
 .vscode

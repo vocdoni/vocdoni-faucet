@@ -240,7 +240,7 @@ func (cfg *Config) InitConfig() error {
 	if err := viper.BindPFlag("api.ListenPort", pflag.Lookup("apiListenPort")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
-	if err := viper.BindPFlag("api.Whitelist", pflag.Lookup("apiWhitelist")); err != nil {
+	if err := viper.BindPFlag("api.AllowedAddrs", pflag.Lookup("apiWhitelist")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
 	viper.Set("api.Ssl.DirCert", cfg.DataDir+"/tls")

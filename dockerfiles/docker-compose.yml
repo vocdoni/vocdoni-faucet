@@ -14,7 +14,7 @@ services:
       - "traefik.http.routers.faucet.entrypoints=websecure"
       - "traefik.http.routers.faucet.tls.certresolver=le"
       - "traefik.http.routers.faucet.service=faucet"
-      - "traefik.http.services.faucet.loadbalancer.server.port=5000"
+      - "traefik.http.services.faucet.loadbalancer.server.port=8000"
 
   traefik:
     image: traefik:2.5
