@@ -50,7 +50,6 @@ Options:
 - `--logErrorFile` **string**                 log errors and warnings to a file
 - `--logLevel` **string**                     log level (debug, info, warn, error, fatal) (default "info")
 - `--logOutput` **string**                    log output (stdout, stderr or filepath) (default "stdout")
-- `--saveConfig` **bool**                     overwrites an existing config file with the CLI provided flags
 - `--vocdoniNetwork` **string**               one of the available vocdoni networks
 - `--vocdoniPrivKey` **string**               hexString privKeys for vocdoni faucet accounts
 

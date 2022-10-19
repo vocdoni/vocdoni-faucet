@@ -59,11 +59,9 @@ type SendConditionsConfig struct {
 type Config struct {
 	// DataDir base directory to store data
 	DataDir string
-	// Save save the config if true
-	Save   bool
-	Log    *LogConfig
-	Faucet *FaucetConfig
-	API    *vocdoniConfig.API
+	Log     *LogConfig
+	Faucet  *FaucetConfig
+	API     *vocdoniConfig.API
 }
 
 // NewConfig returns a pointer to an initialized Config
@@ -77,8 +75,8 @@ func NewConfig() *Config {
 
 // Strings returns the configuration as a string
 func (cfg *Config) String() string {
-	return fmt.Sprintf("DataDir: %s, Save: %v, Log: %+v, Faucet: %+v, API: %+v",
-		cfg.DataDir, cfg.Save, cfg.Log, cfg.Faucet, cfg.API)
+	return fmt.Sprintf("DataDir: %s, Log: %+v, Faucet: %+v, API: %+v",
+		cfg.DataDir, cfg.Log, cfg.Faucet, cfg.API)
 }
 
 // InitConfig initializes the Config with user provided args
@@ -96,8 +94,6 @@ func (cfg *Config) InitConfig() error {
 	cfg.Log.ErrorFile = *pflag.String("logErrorFile", "", "log errors and warnings to a file")
 	// common
 	pflag.StringVar(&cfg.DataDir, "dataDir", home+"/.faucet", "directory where data is stored")
-	cfg.Save = *pflag.Bool("saveConfig", false,
-		"overwrites an existing config file with the CLI provided flags")
 	// faucet
 	cfg.Faucet.EnableEVM = *pflag.Bool("enableEVM", true, "enable evm faucet")
 	cfg.Faucet.EnableVocdoni = *pflag.Bool("enableVocdoni", true, "enable vocdoni faucet")
@@ -153,9 +149,6 @@ func (cfg *Config) InitConfig() error {
 
 	// setting up viper
 	viper := viper.New()
-	viper.AddConfigPath(cfg.DataDir)
-	viper.SetConfigName("vocdoni-faucet")
-	viper.SetConfigType("yml")
 	viper.SetEnvPrefix("VOCDONIFAUCET")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
@@ -246,36 +239,6 @@ func (cfg *Config) InitConfig() error {
 	viper.Set("api.Ssl.DirCert", cfg.DataDir+"/tls")
 	if err := viper.BindPFlag("api.Ssl.Domain", pflag.Lookup("apiTLSDomain")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
-	}
-
-	// check if config file exists
-	_, err = os.Stat(cfg.DataDir + "/vocdoni-faucet.yml")
-	if os.IsNotExist(err) {
-		// creting config folder if not exists
-		err = os.MkdirAll(cfg.DataDir, os.ModePerm)
-		if err != nil {
-			return fmt.Errorf("cannot create data directory: %s", err)
-		}
-		// create config file if not exists
-		if err := viper.SafeWriteConfig(); err != nil {
-			return fmt.Errorf("cannot write config file into config dir: %s", err)
-		}
-	} else {
-		// read config file
-		err = viper.ReadInConfig()
-		if err != nil {
-			return fmt.Errorf("cannot read loaded config file in %s: %s", cfg.DataDir, err)
-		}
-	}
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return fmt.Errorf("cannot unmarshal loaded config file: %s", err)
-	}
-	// save config if required
-	if cfg.Save {
-		viper.Set("saveConfig", false)
-		if err := viper.SafeWriteConfig(); err != nil {
-			return fmt.Errorf("cannot overwrite config file into config dir: %s", err)
-		}
 	}
 	return nil
 }
