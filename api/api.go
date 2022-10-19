@@ -147,6 +147,9 @@ func (a *API) networkParse(network, origin string) faucet.FaucetNetworks {
 }
 
 func (a *API) fromParse(from string) (*common.Address, error) {
+	if !common.IsHexAddress(from) {
+		return nil, ErrInvalidFromAddress
+	}
 	from = util.TrimHex(from)
 	fromAddrBytes, err := hex.DecodeString(from)
 	if err != nil {
