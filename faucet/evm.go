@@ -152,7 +152,8 @@ func (e *EVM) Init(ctx context.Context, evmConfig *config.FaucetConfig) error {
 
 	// set default timeout for endpoint calls
 	if evmConfig.EVMTimeout == 0 {
-		return ErrInvalidTimeout
+		// use default
+		evmConfig.EVMTimeout = time.Minute
 	}
 	e.timeout = evmConfig.EVMTimeout
 
@@ -349,7 +350,7 @@ func (e *EVM) SendTokens(ctx context.Context, to evmcommon.Address) (*evmcommon.
 	if err != nil {
 		return nil, fmt.Errorf("cannot check entity balance")
 	}
-	if !e.sendConditions.basicBalanceCheck(toBalance.Uint64()) {
+	if !e.sendConditions.balanceCheck(toBalance.Uint64()) {
 		return nil, fmt.Errorf("%s has already a balance of: %d, greater than the sendConditions",
 			to.String(),
 			toBalance.Int64(),

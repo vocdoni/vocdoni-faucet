@@ -52,10 +52,10 @@ func TestNewEVM(t *testing.T) {
 	eConfig1.EVMAmount = 100
 	eConfig1.EVMPrivKeys = []string{"0x0"}
 	qt.Assert(t, e.Init(context.Background(), &eConfig1), qt.ErrorMatches, "invalid signer")
-	// should not accept an invalid timeout
+	// if no timeout provided use the default one
 	eConfig1.EVMPrivKeys = []string{"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}
 	eConfig1.EVMTimeout = 0
-	qt.Assert(t, e.Init(context.Background(), &eConfig1), qt.ErrorIs, faucet.ErrInvalidTimeout)
+	qt.Assert(t, e.Init(context.Background(), &eConfig1), qt.IsNil)
 }
 
 func TestNewClient(t *testing.T) {

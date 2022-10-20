@@ -83,6 +83,6 @@ type sendConditions struct {
 	Challenge bool
 }
 
-func (sc *sendConditions) basicBalanceCheck(balance uint64) bool {
+func (sc *sendConditions) balanceCheck(balance uint64) bool {
 	return balance < sc.Balance
 }
