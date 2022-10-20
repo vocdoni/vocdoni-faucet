@@ -42,25 +42,12 @@ type FaucetRequestData struct {
 type FaucetResponse struct {
 	// Amount transferred
 	Amount uint64 `json:"amount"`
-	// FaucetPackage is the Vocdoni faucet package
-	FaucetPackage []byte `json:"faucetPackage,omitempty"`
-	// JSONFaucetPackage represents a faucet package
-	// (with its payload and signature) encoded in base64
-	// oposed to proto encoding
-	JSONFaucetPackage *FaucetPackage `json:"JSONFaucetPackage,omitempty"`
+	// FaucetPackagePayload is the Vocdoni faucet package payload
+	FaucetPayload []byte `json:"faucetPayload,omitempty"`
+	// Signature is the signature for the vocdoni faucet payload
+	Signature types.HexBytes `json:"signature,omitempty"`
 	// TxHash is the EVM tx hash
 	TxHash types.HexBytes `json:"txHash,omitempty"`
-}
-
-type FaucetPayload struct {
-	Amount     uint64         `json:"amount"`
-	Identifier uint64         `json:"identifier"`
-	To         types.HexBytes `json:"to"`
-}
-
-type FaucetPackage struct {
-	Payload   *FaucetPayload `json:"payload"`
-	Signature types.HexBytes `json:"signature"`
 }
 
 // API is the URL based API supporting bearer authentication.
@@ -252,21 +239,14 @@ func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 	if err != nil {
 		return fmt.Errorf("error sending evm tokens: %s", err)
 	}
-	faucetPackageBytes, err := proto.Marshal(faucetPackage)
+	faucetPayloadBytes, err := proto.Marshal(faucetPackage.Payload)
 	if err != nil {
 		return err
 	}
 	resp := &FaucetResponse{
-		FaucetPackage: faucetPackageBytes,
+		FaucetPayload: faucetPayloadBytes,
 		Amount:        a.vocdoniFaucet.Amount(),
-		JSONFaucetPackage: &FaucetPackage{
-			Payload: &FaucetPayload{
-				Amount:     faucetPackage.Payload.Amount,
-				Identifier: faucetPackage.Payload.Identifier,
-				To:         faucetPackage.Payload.To,
-			},
-			Signature: faucetPackage.Signature,
-		},
+		Signature:     faucetPackage.Signature,
 	}
 	msg, err := json.Marshal(resp)
 	if err != nil {

@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	evmcommon "github.com/ethereum/go-ethereum/common"
 	qt "github.com/frankban/quicktest"
 	"github.com/google/uuid"
@@ -83,42 +82,32 @@ func TestAPI(t *testing.T) {
 	qt.Assert(t, code, qt.Equals, 200)
 	respData := &faucetapi.FaucetResponse{}
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)
-	faucetPackageData := &models.FaucetPackage{}
-	qt.Assert(t, proto.Unmarshal(respData.FaucetPackage, faucetPackageData), qt.IsNil)
-	qt.Assert(t, faucetPackageData.Payload.Amount, qt.DeepEquals, uint64(100))
+	faucetPayloadData := &models.FaucetPayload{}
+	qt.Assert(t, proto.Unmarshal(respData.FaucetPayload, faucetPayloadData), qt.IsNil)
+	qt.Assert(t, faucetPayloadData.Amount, qt.DeepEquals, uint64(100))
 	qt.Assert(t,
-		evmcommon.BytesToAddress(faucetPackageData.Payload.To),
+		evmcommon.BytesToAddress(faucetPayloadData.To),
 		qt.DeepEquals,
 		randomEVMAddress,
 	)
-	payloadBytes, err := proto.Marshal(faucetPackageData.Payload)
+	payloadBytes, err := proto.Marshal(faucetPayloadData)
 	qt.Assert(t, err, qt.IsNil)
-	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, faucetPackageData.Signature)
+	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, respData.Signature)
 	qt.Assert(t, err, qt.IsNil)
 	qt.Assert(t, fromAddress, qt.DeepEquals, v.Signer().Address())
 	t.Logf("%s", fmt.Sprintf(
 		`"response": {
 			"code": %d,
 			"data": {
-				"faucetPackage": %s,
+				"faucetPayload": %s,
 				"amount": %d,
-				"jsonFaucetPackage": {
-					"payload": {
-						"amount": %d
-						"identifier": %d
-						"to": %s
-					},
-					"signature": %s
-				},
+				"signature", %s
 			}
 		recovered from address of the faucet is %s`,
 		code,
-		hex.EncodeToString(respData.FaucetPackage),
+		hex.EncodeToString(respData.FaucetPayload),
 		respData.Amount,
-		respData.JSONFaucetPackage.Payload.Amount,
-		respData.JSONFaucetPackage.Payload.Identifier,
-		common.BytesToAddress(respData.JSONFaucetPackage.Payload.To),
-		hex.EncodeToString(respData.JSONFaucetPackage.Signature),
+		hex.EncodeToString(respData.Signature),
 		fromAddress,
 	))
 
