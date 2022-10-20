@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	evmcommon "github.com/ethereum/go-ethereum/common"
 	qt "github.com/frankban/quicktest"
 	"github.com/google/uuid"
@@ -100,12 +101,24 @@ func TestAPI(t *testing.T) {
 			"code": %d,
 			"data": {
 				"faucetPackage": %s,
-				"amount": %d
+				"amount": %d,
+				"jsonFaucetPackage": {
+					"payload": {
+						"amount": %d
+						"identifier": %d
+						"to": %s
+					},
+					"signature": %s
+				},
 			}
 		recovered from address of the faucet is %s`,
 		code,
 		hex.EncodeToString(respData.FaucetPackage),
 		respData.Amount,
+		respData.JSONFaucetPackage.Payload.Amount,
+		respData.JSONFaucetPackage.Payload.Identifier,
+		common.BytesToAddress(respData.JSONFaucetPackage.Payload.To),
+		hex.EncodeToString(respData.JSONFaucetPackage.Signature),
 		fromAddress,
 	))
 
