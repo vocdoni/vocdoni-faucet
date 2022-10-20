@@ -44,8 +44,23 @@ type FaucetResponse struct {
 	Amount uint64 `json:"amount"`
 	// FaucetPackage is the Vocdoni faucet package
 	FaucetPackage []byte `json:"faucetPackage,omitempty"`
+	// JSONFaucetPackage represents a faucet package
+	// (with its payload and signature) encoded in base64
+	// oposed to proto encoding
+	JSONFaucetPackage *FaucetPackage `json:"JSONFaucetPackage,omitempty"`
 	// TxHash is the EVM tx hash
 	TxHash types.HexBytes `json:"txHash,omitempty"`
+}
+
+type FaucetPayload struct {
+	Amount     uint64         `json:"amount"`
+	Identifier uint64         `json:"identifier"`
+	To         types.HexBytes `json:"to"`
+}
+
+type FaucetPackage struct {
+	Payload   *FaucetPayload `json:"payload"`
+	Signature types.HexBytes `json:"signature"`
 }
 
 // API is the URL based API supporting bearer authentication.
@@ -244,6 +259,14 @@ func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 	resp := &FaucetResponse{
 		FaucetPackage: faucetPackageBytes,
 		Amount:        a.vocdoniFaucet.Amount(),
+		JSONFaucetPackage: &FaucetPackage{
+			Payload: &FaucetPayload{
+				Amount:     faucetPackage.Payload.Amount,
+				Identifier: faucetPackage.Payload.Identifier,
+				To:         faucetPackage.Payload.To,
+			},
+			Signature: faucetPackage.Signature,
+		},
 	}
 	msg, err := json.Marshal(resp)
 	if err != nil {
