@@ -3,7 +3,6 @@ package api_test
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -83,7 +82,7 @@ func TestAPI(t *testing.T) {
 	respData := &faucetapi.FaucetResponse{}
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)
 	faucetPayloadData := &models.FaucetPayload{}
-	qt.Assert(t, proto.Unmarshal(respData.FaucetPayload, faucetPayloadData), qt.IsNil)
+	qt.Assert(t, json.Unmarshal(respData.FaucetPackage.FaucetPayload, faucetPayloadData), qt.IsNil)
 	qt.Assert(t, faucetPayloadData.Amount, qt.DeepEquals, uint64(100))
 	qt.Assert(t,
 		evmcommon.BytesToAddress(faucetPayloadData.To),
@@ -92,22 +91,26 @@ func TestAPI(t *testing.T) {
 	)
 	payloadBytes, err := proto.Marshal(faucetPayloadData)
 	qt.Assert(t, err, qt.IsNil)
-	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, respData.Signature)
+	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, respData.FaucetPackage.Signature)
 	qt.Assert(t, err, qt.IsNil)
 	qt.Assert(t, fromAddress, qt.DeepEquals, v.Signer().Address())
 	t.Logf("%s", fmt.Sprintf(
 		`"response": {
 			"code": %d,
 			"data": {
-				"faucetPayload": %s,
-				"amount": %d,
-				"signature", %s
+				"amount": %s,
+				"faucetPackage": %x,
+				"faucetPackageContent": {
+					"faucetPayload": "%x",
+					"signature": "%x"
+				},
 			}
 		recovered from address of the faucet is %s`,
 		code,
-		hex.EncodeToString(respData.FaucetPayload),
 		respData.Amount,
-		hex.EncodeToString(respData.Signature),
+		respData.FaucetPackage,
+		respData.FaucetPackage.FaucetPayload,
+		respData.FaucetPackage.Signature,
 		fromAddress,
 	))
 
@@ -122,7 +125,7 @@ func TestAPI(t *testing.T) {
 				"code": %d,
 				"data": {
 					"txHash": "%s",
-					"amount": "%d"
+					"amount": "%s"
 				},
 			}`,
 		code,

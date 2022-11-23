@@ -25,7 +25,7 @@ type EVM struct {
 	// chainID chainId/networkId of the network
 	chainID int
 	// amount of tokens to be transferred
-	amount uint64
+	amount *big.Int
 	// endpoints to connect with
 	endpoints []string
 	// client client instance connected to an endpoint
@@ -49,7 +49,7 @@ func NewEVM() *EVM {
 }
 
 // Amount returns the amount for the faucet
-func (e *EVM) Amout() uint64 {
+func (e *EVM) Amout() *big.Int {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	return e.amount
@@ -79,10 +79,10 @@ func (e *EVM) setSendConditions(balance uint64, challenge bool) {
 }
 
 // SetAmount sets the amount for the faucet
-func (e *EVM) SetAmount(amount uint64) error {
+func (e *EVM) SetAmount(amount *big.Int) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
-	if amount == 0 && amount == e.amount {
+	if amount.Cmp(big.NewInt(0)) == 0 {
 		return ErrInvalidAmount
 	}
 	e.amount = amount
@@ -141,7 +141,7 @@ func (e *EVM) Init(ctx context.Context, evmConfig *config.FaucetConfig) error {
 	}
 
 	// set amout to transfer
-	if err := e.SetAmount(evmConfig.EVMAmount); err != nil {
+	if err := e.SetAmount(big.NewInt(int64(evmConfig.EVMAmount))); err != nil {
 		return ErrInvalidAmount
 	}
 
@@ -301,7 +301,7 @@ func (e *EVM) sendTokens(ctx context.Context,
 		GasTipCap: maxPriorityFeePerGas,
 		Gas:       uint64(21000), // enough for standard eth transfers
 		To:        &to,
-		Value:     big.NewInt(int64(e.amount)), // in wei
+		Value:     e.amount, // in wei
 	})
 	// sign tx
 	signedTx, err := evmtypes.SignTx(tx,
