@@ -15,7 +15,6 @@ import (
 	"go.vocdoni.io/dvote/types"
 	"go.vocdoni.io/dvote/util"
 	"go.vocdoni.io/vocdoni-faucet/faucet"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -41,13 +40,19 @@ type FaucetRequestData struct {
 // FaucetResponse represents the message on the response of a faucet request
 type FaucetResponse struct {
 	// Amount transferred
-	Amount uint64 `json:"amount"`
-	// FaucetPackagePayload is the Vocdoni faucet package payload
-	FaucetPayload []byte `json:"faucetPayload,omitempty"`
-	// Signature is the signature for the vocdoni faucet payload
-	Signature types.HexBytes `json:"signature,omitempty"`
+	Amount string `json:"amount,omitempty"`
+	// FaucetPackage represents the faucet package
+	FaucetPackage *FaucetPackage `json:"faucetPackage,omitempty"`
 	// TxHash is the EVM tx hash
 	TxHash types.HexBytes `json:"txHash,omitempty"`
+}
+
+// FaucetPackage represents the data of a faucet package
+type FaucetPackage struct {
+	// FaucetPackagePayload is the Vocdoni faucet package payload
+	FaucetPayload []byte `json:"faucetPayload"`
+	// Signature is the signature for the vocdoni faucet payload
+	Signature []byte `json:"signature"`
 }
 
 // API is the URL based API supporting bearer authentication.
@@ -218,7 +223,7 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 	}
 	resp := &FaucetResponse{
 		TxHash: types.HexBytes(txHash.Bytes()),
-		Amount: a.evmFaucet.Amout(),
+		Amount: a.evmFaucet.Amout().String(),
 	}
 	msg, err := json.Marshal(resp)
 	if err != nil {
@@ -239,14 +244,16 @@ func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 	if err != nil {
 		return fmt.Errorf("error sending evm tokens: %s", err)
 	}
-	faucetPayloadBytes, err := proto.Marshal(faucetPackage.Payload)
+	faucetPayloadBytes, err := json.Marshal(faucetPackage.Payload)
 	if err != nil {
 		return err
 	}
 	resp := &FaucetResponse{
-		FaucetPayload: faucetPayloadBytes,
-		Amount:        a.vocdoniFaucet.Amount(),
-		Signature:     faucetPackage.Signature,
+		Amount: a.vocdoniFaucet.Amount().String(),
+		FaucetPackage: &FaucetPackage{
+			FaucetPayload: faucetPayloadBytes,
+			Signature:     faucetPackage.Signature,
+		},
 	}
 	msg, err := json.Marshal(resp)
 	if err != nil {
