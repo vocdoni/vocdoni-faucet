@@ -2,7 +2,6 @@ package faucet_test
 
 import (
 	"context"
-	"math/big"
 	"testing"
 
 	qt "github.com/frankban/quicktest"
@@ -128,9 +127,9 @@ func TestSendTokens(t *testing.T) {
 		"f3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 	}), qt.IsNil)
 	// send tokens to new signer
-	qt.Assert(t, e.SetAmount(big.NewInt(1079853350110000)), qt.IsNil)
+	qt.Assert(t, e.SetAmount(1079853350110000), qt.IsNil)
 	_, err = e.SendTokens(context.Background(), newSigner.Address())
-	qt.Assert(t, e.SetAmount(big.NewInt(100)), qt.IsNil)
+	qt.Assert(t, e.SetAmount(100), qt.IsNil)
 	qt.Assert(t, err, qt.IsNil)
 	e.TestBackend().Backend.Commit() // save ethereum state
 	// expected to use two different signers
@@ -182,7 +181,7 @@ func TestGenerateFaucet(t *testing.T) {
 	qt.Assert(t, toAddr.Generate(), qt.IsNil)
 	faucetPackage, err := v.GenerateFaucetPackage(toAddr.Address())
 	qt.Assert(t, err, qt.IsNil)
-	qt.Assert(t, faucetPackage.Payload.Amount, qt.DeepEquals, v.Amount().Uint64())
+	qt.Assert(t, faucetPackage.Payload.Amount, qt.DeepEquals, v.Amount())
 	qt.Assert(t, faucetPackage.Payload.To, qt.DeepEquals, toAddr.Address().Bytes())
 	protoBytes, err := proto.Marshal(faucetPackage.Payload)
 	qt.Assert(t, err, qt.IsNil)
