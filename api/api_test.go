@@ -20,11 +20,9 @@ import (
 	"go.vocdoni.io/dvote/crypto/ethereum"
 	"go.vocdoni.io/dvote/httprouter"
 	"go.vocdoni.io/dvote/log"
-	"go.vocdoni.io/proto/build/go/models"
 	faucetapi "go.vocdoni.io/vocdoni-faucet/api"
 	"go.vocdoni.io/vocdoni-faucet/config"
 	"go.vocdoni.io/vocdoni-faucet/faucet"
-	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -82,17 +80,19 @@ func TestAPI(t *testing.T) {
 	respData := &faucetapi.FaucetResponse{}
 	t.Logf("response: %x", resp)
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)
-	faucetPayloadData := &models.FaucetPayload{}
-	qt.Assert(t, json.Unmarshal(respData.FaucetPackage.FaucetPayload, faucetPayloadData), qt.IsNil)
+	faucetPackageData := &faucetapi.FaucetPackage{}
+	faucetPayloadData := &faucetapi.FaucetPayload{}
+	qt.Assert(t, json.Unmarshal(respData.FaucetPackage, faucetPackageData), qt.IsNil)
+	qt.Assert(t, json.Unmarshal(faucetPackageData.FaucetPayload, faucetPayloadData), qt.IsNil)
 	qt.Assert(t, faucetPayloadData.Amount, qt.DeepEquals, uint64(100))
 	qt.Assert(t,
 		evmcommon.BytesToAddress(faucetPayloadData.To),
 		qt.DeepEquals,
 		randomEVMAddress,
 	)
-	payloadBytes, err := proto.Marshal(faucetPayloadData)
+	payloadBytes, err := json.Marshal(faucetPayloadData)
 	qt.Assert(t, err, qt.IsNil)
-	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, respData.FaucetPackage.Signature)
+	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, faucetPackageData.Signature)
 	qt.Assert(t, err, qt.IsNil)
 	qt.Assert(t, fromAddress, qt.DeepEquals, v.Signer().Address())
 	t.Logf("%s", fmt.Sprintf(
@@ -110,8 +110,8 @@ func TestAPI(t *testing.T) {
 		code,
 		respData.Amount,
 		respData.FaucetPackage,
-		respData.FaucetPackage.FaucetPayload,
-		respData.FaucetPackage.Signature,
+		faucetPackageData.FaucetPayload,
+		faucetPackageData.Signature,
 		fromAddress,
 	))
 

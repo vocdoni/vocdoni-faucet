@@ -2,14 +2,17 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/uuid"
+	"go.vocdoni.io/dvote/crypto/ethereum"
 	"go.vocdoni.io/dvote/httprouter"
 	"go.vocdoni.io/dvote/httprouter/bearerstdapi"
 	"go.vocdoni.io/dvote/types"
@@ -22,6 +25,7 @@ const (
 	Vocdoni = "vocdoni"
 	// Maximum number of requests a whitelisted caller can do
 	MaxRequest = 10000
+	MAXUINT64  = uint64(9223372036854775807)
 )
 
 var (
@@ -42,7 +46,7 @@ type FaucetResponse struct {
 	// Amount transferred
 	Amount string `json:"amount,omitempty"`
 	// FaucetPackage represents the faucet package
-	FaucetPackage *FaucetPackage `json:"faucetPackage,omitempty"`
+	FaucetPackage []byte `json:"faucetPackage,omitempty"`
 	// TxHash is the EVM tx hash
 	TxHash types.HexBytes `json:"txHash,omitempty"`
 }
@@ -53,6 +57,15 @@ type FaucetPackage struct {
 	FaucetPayload []byte `json:"faucetPayload"`
 	// Signature is the signature for the vocdoni faucet payload
 	Signature []byte `json:"signature"`
+}
+
+type FaucetPayload struct {
+	// Amount is the amount of tokens to be transferred
+	Amount uint64 `json:"amount"`
+	// Identifier is the unique identifier of the faucet payload
+	Identifier uint64 `json:"identifier"`
+	// To is the address to which the tokens will be transferred
+	To []byte `json:"to"`
 }
 
 // API is the URL based API supporting bearer authentication.
@@ -240,24 +253,54 @@ func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 	if faucet.VocdoniSupportedFaucetNetworksMap[a.vocdoniFaucet.Network()] != network {
 		return fmt.Errorf("unavailable network")
 	}
-	faucetPackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
+	faucetPackage, err := generateFaucetPackage(
+		a.vocdoniFaucet.Signer(),
+		from,
+		a.vocdoniFaucet.Amount(),
+	)
 	if err != nil {
 		return fmt.Errorf("error sending evm tokens: %s", err)
 	}
-	faucetPayloadBytes, err := json.Marshal(faucetPackage.Payload)
+
+	faucetPackageBytes, err := json.Marshal(faucetPackage)
 	if err != nil {
 		return err
 	}
 	resp := &FaucetResponse{
-		Amount: fmt.Sprint(a.vocdoniFaucet.Amount()),
-		FaucetPackage: &FaucetPackage{
-			FaucetPayload: faucetPayloadBytes,
-			Signature:     faucetPackage.Signature,
-		},
+		Amount:        fmt.Sprint(a.vocdoniFaucet.Amount()),
+		FaucetPackage: faucetPackageBytes,
 	}
 	msg, err := json.Marshal(resp)
 	if err != nil {
 		return err
 	}
 	return ctx.Send(msg, bearerstdapi.HTTPstatusCodeOK)
+}
+
+// generateFaucetPackage generates a faucet package
+func generateFaucetPackage(from *ethereum.SignKeys,
+	to common.Address,
+	value uint64,
+) (*FaucetPackage, error) {
+	identifier, err := rand.Int(rand.Reader, big.NewInt(int64(MAXUINT64)))
+	if err != nil {
+		return nil, fmt.Errorf("cannot generate faucet package identifier")
+	}
+	payload := &FaucetPayload{
+		Identifier: identifier.Uint64(),
+		To:         to.Bytes(),
+		Amount:     value,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	payloadSignature, err := from.SignEthereum(payloadBytes)
+	if err != nil {
+		return nil, err
+	}
+	return &FaucetPackage{
+		FaucetPayload: payloadBytes,
+		Signature:     payloadSignature,
+	}, nil
 }
