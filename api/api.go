@@ -223,7 +223,7 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 	}
 	resp := &FaucetResponse{
 		TxHash: types.HexBytes(txHash.Bytes()),
-		Amount: a.evmFaucet.Amout().String(),
+		Amount: fmt.Sprint(a.evmFaucet.Amout()),
 	}
 	msg, err := json.Marshal(resp)
 	if err != nil {
@@ -249,7 +249,7 @@ func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
 		return err
 	}
 	resp := &FaucetResponse{
-		Amount: a.vocdoniFaucet.Amount().String(),
+		Amount: fmt.Sprint(a.vocdoniFaucet.Amount()),
 		FaucetPackage: &FaucetPackage{
 			FaucetPayload: faucetPayloadBytes,
 			Signature:     faucetPackage.Signature,

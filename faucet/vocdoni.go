@@ -20,7 +20,7 @@ type Vocdoni struct {
 	// networkID one of the Vocdoni networks
 	networkID string
 	// amount of tokens to include
-	amount *big.Int
+	amount uint64
 	// signer account that will be used for signing
 	signer *ethereum.SignKeys
 	// sendConditions conditions to meet before executing an action
@@ -33,7 +33,7 @@ func NewVocdoni() *Vocdoni {
 }
 
 // Amount returns amount
-func (v *Vocdoni) Amount() *big.Int {
+func (v *Vocdoni) Amount() uint64 {
 	return v.amount
 }
 
@@ -47,8 +47,8 @@ func (v *Vocdoni) Network() string {
 	return v.network
 }
 
-func (v *Vocdoni) setAmount(amount *big.Int) error {
-	if amount.Cmp(big.NewInt(0)) == 0 {
+func (v *Vocdoni) setAmount(amount uint64) error {
+	if amount == 0 {
 		return ErrInvalidAmount
 	}
 	v.amount = amount
@@ -73,7 +73,7 @@ func (v *Vocdoni) Init(ctx context.Context, vocdoniConfig *config.FaucetConfig) 
 	v.networkID = chainSpecs.networkID
 
 	// set amout to transfer
-	if err := v.setAmount(big.NewInt(int64(vocdoniConfig.VocdoniAmount))); err != nil {
+	if err := v.setAmount(vocdoniConfig.VocdoniAmount); err != nil {
 		return err
 	}
 
@@ -94,14 +94,14 @@ func (v *Vocdoni) Init(ctx context.Context, vocdoniConfig *config.FaucetConfig) 
 
 // GenerateFaucetPackage generates a faucet package
 func (v *Vocdoni) GenerateFaucetPackage(address evmcommon.Address) (*models.FaucetPackage, error) {
-	identifier, err := rand.Int(rand.Reader, big.NewInt(MAXINT64))
+	identifier, err := rand.Int(rand.Reader, big.NewInt(int64(MAXUINT64)))
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate faucet package identifier")
 	}
 	return vochain.GenerateFaucetPackage(
 		v.signer,
 		address,
-		v.amount.Uint64(),
+		v.amount,
 		identifier.Uint64(),
 	)
 }

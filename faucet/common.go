@@ -35,7 +35,7 @@ const (
 )
 
 var (
-	MAXINT64 = int64(9223372036854775807)
+	MAXUINT64 = uint64(9223372036854775807)
 	// ErrInvalidEndpoint error wrapping invalid endpoint errors
 	ErrInvalidEndpoint error = errors.New("invalid endpoint")
 	// ErrInvalidAmount error wrapping invalid amount errors

@@ -80,6 +80,7 @@ func TestAPI(t *testing.T) {
 	resp, code := c.request("GET", nil, "vocdoni", "dev", randomEVMAddress.Hex())
 	qt.Assert(t, code, qt.Equals, 200)
 	respData := &faucetapi.FaucetResponse{}
+	t.Logf("response: %x", resp)
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)
 	faucetPayloadData := &models.FaucetPayload{}
 	qt.Assert(t, json.Unmarshal(respData.FaucetPackage.FaucetPayload, faucetPayloadData), qt.IsNil)
@@ -116,7 +117,7 @@ func TestAPI(t *testing.T) {
 
 	// create ethereum request
 	resp, code = c.request("GET", nil, "evm", "evmtest", randomEVMAddress.String())
-	// make the test blockchain to mine a block
+	t.Logf("response: %x", resp)
 	qt.Assert(t, code, qt.Equals, 200)
 	respData = &faucetapi.FaucetResponse{}
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)
