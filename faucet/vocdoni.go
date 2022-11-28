@@ -2,9 +2,14 @@ package faucet
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+	"math/big"
 
+	evmcommon "github.com/ethereum/go-ethereum/common"
 	"go.vocdoni.io/dvote/crypto/ethereum"
+	"go.vocdoni.io/dvote/vochain"
+	"go.vocdoni.io/proto/build/go/models"
 	"go.vocdoni.io/vocdoni-faucet/config"
 )
 
@@ -85,6 +90,20 @@ func (v *Vocdoni) Init(ctx context.Context, vocdoniConfig *config.FaucetConfig) 
 	)
 
 	return nil
+}
+
+// GenerateFaucetPackage generates a faucet package
+func (v *Vocdoni) GenerateFaucetPackage(address evmcommon.Address) (*models.FaucetPackage, error) {
+	identifier, err := rand.Int(rand.Reader, big.NewInt(int64(MAXUINT64)))
+	if err != nil {
+		return nil, fmt.Errorf("cannot generate faucet package identifier")
+	}
+	return vochain.GenerateFaucetPackage(
+		v.signer,
+		address,
+		v.amount,
+		identifier.Uint64(),
+	)
 }
 
 var (

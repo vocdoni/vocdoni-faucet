@@ -8,6 +8,7 @@ import (
 	"go.vocdoni.io/dvote/crypto/ethereum"
 	"go.vocdoni.io/vocdoni-faucet/config"
 	"go.vocdoni.io/vocdoni-faucet/faucet"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -171,4 +172,20 @@ func TestNewVocdoni(t *testing.T) {
 	// should work
 	vConfig1.VocdoniPrivKey = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	qt.Assert(t, v.Init(context.Background(), &vConfig1), qt.IsNil)
+}
+
+func TestGenerateFaucet(t *testing.T) {
+	v := &faucet.Vocdoni{}
+	qt.Assert(t, v.Init(context.Background(), vConfig), qt.IsNil)
+	toAddr := &ethereum.SignKeys{}
+	qt.Assert(t, toAddr.Generate(), qt.IsNil)
+	faucetPackage, err := v.GenerateFaucetPackage(toAddr.Address())
+	qt.Assert(t, err, qt.IsNil)
+	qt.Assert(t, faucetPackage.Payload.Amount, qt.DeepEquals, v.Amount())
+	qt.Assert(t, faucetPackage.Payload.To, qt.DeepEquals, toAddr.Address().Bytes())
+	protoBytes, err := proto.Marshal(faucetPackage.Payload)
+	qt.Assert(t, err, qt.IsNil)
+	fromAddr, err := ethereum.AddrFromSignature(protoBytes, faucetPackage.Signature)
+	qt.Assert(t, err, qt.IsNil)
+	qt.Assert(t, fromAddr, qt.DeepEquals, v.Signer().Address())
 }
