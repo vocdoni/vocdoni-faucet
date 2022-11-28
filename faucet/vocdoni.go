@@ -8,10 +8,36 @@ import (
 
 	evmcommon "github.com/ethereum/go-ethereum/common"
 	"go.vocdoni.io/dvote/crypto/ethereum"
-	"go.vocdoni.io/dvote/vochain"
 	"go.vocdoni.io/proto/build/go/models"
 	"go.vocdoni.io/vocdoni-faucet/config"
+	"google.golang.org/protobuf/proto"
 )
+
+var (
+	azeno = vocdoniSpecs{network: "azeno", networkID: "azeno"}
+	stage = vocdoniSpecs{network: "stage", networkID: "stage"}
+	dev   = vocdoniSpecs{network: "dev", networkID: "dev"}
+)
+
+// vocdoniSpecs defines a set of Vocdoni blockchain network specifications
+type vocdoniSpecs struct {
+	network   string
+	networkID string
+}
+
+// VocdoniSpecsFor returns the specs for the given Vocdoni blockchain network name
+func vocdoniSpecsFor(name string) (*vocdoniSpecs, error) {
+	switch name {
+	case "azeno":
+		return &azeno, nil
+	case "stage":
+		return &stage, nil
+	case "dev":
+		return &dev, nil
+	default:
+		return nil, ErrInvalidNetwork
+	}
+}
 
 // Vocdoni contains all components required for the Vocdoni faucet
 type Vocdoni struct {
@@ -98,36 +124,22 @@ func (v *Vocdoni) GenerateFaucetPackage(address evmcommon.Address) (*models.Fauc
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate faucet package identifier")
 	}
-	return vochain.GenerateFaucetPackage(
-		v.signer,
-		address,
-		v.amount,
-		identifier.Uint64(),
-	)
-}
 
-var (
-	azeno = vocdoniSpecs{network: "azeno", networkID: "azeno"}
-	stage = vocdoniSpecs{network: "stage", networkID: "stage"}
-	dev   = vocdoniSpecs{network: "dev", networkID: "dev"}
-)
-
-// vocdoniSpecs defines a set of Vocdoni blockchain network specifications
-type vocdoniSpecs struct {
-	network   string
-	networkID string
-}
-
-// VocdoniSpecsFor returns the specs for the given Vocdoni blockchain network name
-func vocdoniSpecsFor(name string) (*vocdoniSpecs, error) {
-	switch name {
-	case "azeno":
-		return &azeno, nil
-	case "stage":
-		return &stage, nil
-	case "dev":
-		return &dev, nil
-	default:
-		return nil, ErrInvalidNetwork
+	payload := &models.FaucetPayload{
+		Identifier: identifier.Uint64(),
+		To:         address.Bytes(),
+		Amount:     v.amount,
 	}
+	payloadBytes, err := proto.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	payloadSignature, err := v.signer.SignEthereum(payloadBytes)
+	if err != nil {
+		return nil, err
+	}
+	return &models.FaucetPackage{
+		Payload:   payloadBytes,
+		Signature: payloadSignature,
+	}, nil
 }

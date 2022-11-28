@@ -42,7 +42,7 @@ type FaucetResponse struct {
 	// Amount transferred
 	Amount string `json:"amount,omitempty"`
 	// FaucetPackage represents the faucet package
-	FaucetPackage *FaucetPackage `json:"faucetPackage,omitempty"`
+	FaucetPackage []byte `json:"faucetPackage,omitempty"`
 	// TxHash is the EVM tx hash
 	TxHash types.HexBytes `json:"txHash,omitempty"`
 }
@@ -163,9 +163,6 @@ func (a *API) fromParse(from string) (*common.Address, error) {
 		return nil, ErrInvalidFromAddress
 	}
 	fromAddr := common.BytesToAddress(fromAddrBytes)
-	if fromAddr == types.EthereumZeroAddress {
-		return nil, ErrInvalidFromAddress
-	}
 	return &fromAddr, err
 }
 
@@ -234,26 +231,26 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 
 // request vocdoni funds to the faucet
 func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext,
-	network faucet.FaucetNetworks,
-	from common.Address,
-) error {
+	network faucet.FaucetNetworks, from common.Address) error {
 	if faucet.VocdoniSupportedFaucetNetworksMap[a.vocdoniFaucet.Network()] != network {
 		return fmt.Errorf("unavailable network")
 	}
-	faucetPackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
+	fpackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
 	if err != nil {
-		return fmt.Errorf("error sending evm tokens: %s", err)
+		return fmt.Errorf("could not generate faucet package: %w", err)
 	}
-	faucetPayloadBytes, err := json.Marshal(faucetPackage.Payload)
+
+	fpackageBytes, err := json.Marshal(FaucetPackage{
+		FaucetPayload: fpackage.Payload,
+		Signature:     fpackage.Signature,
+	})
 	if err != nil {
 		return err
 	}
+
 	resp := &FaucetResponse{
-		Amount: fmt.Sprint(a.vocdoniFaucet.Amount()),
-		FaucetPackage: &FaucetPackage{
-			FaucetPayload: faucetPayloadBytes,
-			Signature:     faucetPackage.Signature,
-		},
+		Amount:        fmt.Sprint(a.vocdoniFaucet.Amount()),
+		FaucetPackage: fpackageBytes,
 	}
 	msg, err := json.Marshal(resp)
 	if err != nil {

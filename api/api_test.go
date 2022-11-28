@@ -82,17 +82,20 @@ func TestAPI(t *testing.T) {
 	respData := &faucetapi.FaucetResponse{}
 	t.Logf("response: %x", resp)
 	qt.Assert(t, json.Unmarshal(resp, &respData), qt.IsNil)
+
+	fPackage := faucetapi.FaucetPackage{}
+	qt.Assert(t, json.Unmarshal(respData.FaucetPackage, &fPackage), qt.IsNil)
+
 	faucetPayloadData := &models.FaucetPayload{}
-	qt.Assert(t, json.Unmarshal(respData.FaucetPackage.FaucetPayload, faucetPayloadData), qt.IsNil)
+	qt.Assert(t, proto.Unmarshal(fPackage.FaucetPayload, faucetPayloadData), qt.IsNil)
+
 	qt.Assert(t, faucetPayloadData.Amount, qt.DeepEquals, uint64(100))
 	qt.Assert(t,
 		evmcommon.BytesToAddress(faucetPayloadData.To),
 		qt.DeepEquals,
 		randomEVMAddress,
 	)
-	payloadBytes, err := proto.Marshal(faucetPayloadData)
-	qt.Assert(t, err, qt.IsNil)
-	fromAddress, err := ethereum.AddrFromSignature(payloadBytes, respData.FaucetPackage.Signature)
+	fromAddress, err := ethereum.AddrFromSignature(fPackage.FaucetPayload, fPackage.Signature)
 	qt.Assert(t, err, qt.IsNil)
 	qt.Assert(t, fromAddress, qt.DeepEquals, v.Signer().Address())
 	t.Logf("%s", fmt.Sprintf(
@@ -102,7 +105,7 @@ func TestAPI(t *testing.T) {
 				"amount": %s,
 				"faucetPackage": %x,
 				"faucetPackageContent": {
-					"faucetPayload": "%x",
+					"faucetPayload": "%s",
 					"signature": "%x"
 				},
 			}
@@ -110,8 +113,8 @@ func TestAPI(t *testing.T) {
 		code,
 		respData.Amount,
 		respData.FaucetPackage,
-		respData.FaucetPackage.FaucetPayload,
-		respData.FaucetPackage.Signature,
+		log.FormatProto(faucetPayloadData),
+		fPackage.Signature,
 		fromAddress,
 	))
 
