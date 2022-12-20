@@ -231,8 +231,10 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 
 // request vocdoni funds to the faucet
 func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext, network faucet.FaucetNetworks, from common.Address) error {
-	if faucet.VocdoniSupportedFaucetNetworksMap[a.vocdoniFaucet.Network()] != network {
-		return fmt.Errorf("unavailable network")
+	for _, faucetNetwork := range a.vocdoniFaucet.Network() {
+		if faucet.VocdoniSupportedFaucetNetworksMap[faucetNetwork] != network {
+			return fmt.Errorf("unavailable network")
+		}
 	}
 	fpackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
 	if err != nil {

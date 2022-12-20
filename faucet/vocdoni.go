@@ -44,7 +44,7 @@ type Vocdoni struct {
 	// network name of the network
 	network,
 	// networkID one of the Vocdoni networks
-	networkID string
+	networkID []string
 	// amount of tokens to include
 	amount uint64
 	// signer account that will be used for signing
@@ -69,7 +69,7 @@ func (v *Vocdoni) Signer() *ethereum.SignKeys {
 }
 
 // Network returns the faucet vocdoni network
-func (v *Vocdoni) Network() string {
+func (v *Vocdoni) Network() []string {
 	return v.network
 }
 
@@ -91,12 +91,16 @@ func (v *Vocdoni) setSendConditions(balance uint64, challenge bool) {
 // Init initializes a Vocdoni instance with the given config
 func (v *Vocdoni) Init(ctx context.Context, vocdoniConfig *config.FaucetConfig) error {
 	// get chain specs
-	chainSpecs, err := vocdoniSpecsFor(vocdoniConfig.VocdoniNetwork)
-	if err != nil {
-		return err
+
+	for _, network := range vocdoniConfig.VocdoniNetworks {
+		chainSpecs, err := vocdoniSpecsFor(network)
+		if err != nil {
+			return err
+		}
+		v.network = append(v.network, chainSpecs.network)
+		v.networkID = append(v.networkID, chainSpecs.networkID)
+
 	}
-	v.network = chainSpecs.network
-	v.networkID = chainSpecs.networkID
 
 	// set amout to transfer
 	if err := v.setAmount(vocdoniConfig.VocdoniAmount); err != nil {

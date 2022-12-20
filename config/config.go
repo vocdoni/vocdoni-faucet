@@ -33,15 +33,15 @@ type FaucetConfig struct {
 	// EVM network name to connect with.
 	// Accepted one of SupportedFaucetNetworksMap
 	EVMNetwork,
-	// Vocdoni network name to connect with.
-	// Accepted one of SupportedFaucetNetworksMap
-	VocdoniNetwork,
 	// VocdoniPrivKey Vocdoni faucet signer key
 	VocdoniPrivKey string
 	// EVMPrivKeys EVM faucet signers keys
 	EVMPrivKeys,
 	// EVMEndpoints endpoints to connect the EVM faucet with
-	EVMEndpoints []string
+	EVMEndpoints,
+	// Vocdoni network name to connect with.
+	// Accepted one of SupportedFaucetNetworksMap
+	VocdoniNetworks []string
 	// EVMTimeout faucet global timeout for EVM operations in seconds
 	EVMTimeout time.Duration
 	// SendConditions config for sendConditions
@@ -97,16 +97,16 @@ func (cfg *Config) InitConfig() error {
 	// faucet
 	cfg.Faucet.EnableEVM = *pflag.Bool("enableEVM", true, "enable evm faucet")
 	cfg.Faucet.EnableVocdoni = *pflag.Bool("enableVocdoni", true, "enable vocdoni faucet")
-	cfg.Faucet.EVMPrivKeys = *pflag.StringArray("evmPrivKeys", []string{},
+	cfg.Faucet.EVMPrivKeys = *pflag.StringSlice("evmPrivKeys", []string{},
 		"hexString privKeys for EVM faucet accounts")
 	cfg.Faucet.VocdoniPrivKey = *pflag.String("vocdoniPrivKey",
 		"", "hexString privKeys for vocdoni faucet accounts")
-	cfg.Faucet.EVMEndpoints = *pflag.StringArray("evmEndpoints", []string{},
+	cfg.Faucet.EVMEndpoints = *pflag.StringSlice("evmEndpoints", []string{},
 		"evm endpoints to connect with (requied for the evm faucet)")
 	cfg.Faucet.EVMNetwork = *pflag.String("evmNetwork",
 		"", "one of the available evm chains")
-	cfg.Faucet.VocdoniNetwork = *pflag.String("vocdoniNetwork",
-		"", "one of the available vocdoni networks")
+	cfg.Faucet.VocdoniNetworks = *pflag.StringSlice("vocdoniNetworks",
+		[]string{}, "one or more of the available vocdoni networks")
 	cfg.Faucet.EVMAmount = *pflag.Uint64(
 		"faucetEVMAmount",
 		1,
@@ -187,7 +187,7 @@ func (cfg *Config) InitConfig() error {
 	if err := viper.BindPFlag("faucet.EVMNetwork", pflag.Lookup("evmNetwork")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
-	if err := viper.BindPFlag("faucet.VocdoniNetwork", pflag.Lookup("vocdoniNetwork")); err != nil {
+	if err := viper.BindPFlag("faucet.VocdoniNetworks", pflag.Lookup("vocdoniNetworks")); err != nil {
 		return fmt.Errorf("%s: %s", ErrBindPFlag, err)
 	}
 	if err := viper.BindPFlag("faucet.EVMAmount", pflag.Lookup("faucetEVMAmount")); err != nil {
