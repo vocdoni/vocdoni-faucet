@@ -38,9 +38,9 @@ Options:
 - `--dataDir` **string**                      directory where data is stored (default "/home/me/.faucet")
 - `--enableEVM` **bool**                      enable evm faucet (default true)
 - `--enableVocdoni` **bool**                  enable vocdoni faucet (default true)
-- `--evmEndpoints` **stringArray**            evm endpoints to connect with (requied for the evm faucet)
+- `--evmEndpoints` **StringSlice**            evm endpoints to connect with (requied for the evm faucet)
 - `--evmNetwork` **string**                   one of the available evm chains
-- `--evmPrivKeys` **stringArray**             hexString privKeys for EVM faucet accounts
+- `--evmPrivKeys` **StringSlice**             hexString privKeys for EVM faucet accounts
 - `--faucetEVMAmount` **uint**                evm faucet amount in wei (1000000000000000000 == 1 ETH) (default 1)
 - `--faucetEVMAmountThreshold` **uint**       minimum EVM amount threshold for transfer (default 1)
 - `--faucetEVMEnableChallenge` **bool**       if true a EVM faucet challenge must be solved
@@ -50,7 +50,7 @@ Options:
 - `--logErrorFile` **string**                 log errors and warnings to a file
 - `--logLevel` **string**                     log level (debug, info, warn, error, fatal) (default "info")
 - `--logOutput` **string**                    log output (stdout, stderr or filepath) (default "stdout")
-- `--vocdoniNetwork` **string**               one of the available vocdoni networks
+- `--vocdoniNetworks` **StringSlice**         one or more of the available vocdoni networks
 - `--vocdoniPrivKey` **string**               hexString privKeys for vocdoni faucet accounts
 
 ## API
@@ -59,7 +59,7 @@ Options:
 
     `curl -X GET https://foo.bar/faucet/vocdoni/<network>/<from>`
 
-    - `<network>` one of `[dev, stage, azeno]`
+    - `<network>` one or more of `[dev, stage, azeno]`
     - `<from>` an EVM address (i.e `0xeD33259a056F4fb449FFB7B7E2eCB43a9B5685Bf`)
 
 - Response (Vocdoni)

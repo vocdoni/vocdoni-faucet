@@ -40,9 +40,9 @@ var (
 		},
 	}
 	vConfig = &config.FaucetConfig{
-		VocdoniAmount:  100,
-		VocdoniNetwork: "dev",
-		VocdoniPrivKey: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+		VocdoniAmount:   100,
+		VocdoniNetworks: []string{"dev"},
+		VocdoniPrivKey:  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		VocdoniSendConditions: config.SendConditionsConfig{
 			Balance:   100,
 			Challenge: false,
