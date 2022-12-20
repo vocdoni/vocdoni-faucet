@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"go.vocdoni.io/dvote/httprouter"
 	"go.vocdoni.io/dvote/httprouter/bearerstdapi"
+	"go.vocdoni.io/dvote/log"
 	"go.vocdoni.io/dvote/types"
 	"go.vocdoni.io/dvote/util"
 	"go.vocdoni.io/vocdoni-faucet/faucet"
@@ -187,6 +188,7 @@ func (a *API) faucetHandler(msg *bearerstdapi.BearerStandardAPIdata,
 		return err
 	}
 	// handle
+	log.Debugf("faucet request from %s for network %+v", from.String(), network)
 	switch network {
 	case faucet.FaucetNetworksUndefined:
 		return fmt.Errorf("%s", "unsupported network")
@@ -231,10 +233,14 @@ func (a *API) evmFaucetHandler(ctx *httprouter.HTTPContext,
 
 // request vocdoni funds to the faucet
 func (a *API) vocdoniFaucetHandler(ctx *httprouter.HTTPContext, network faucet.FaucetNetworks, from common.Address) error {
+	networkFound := false
 	for _, faucetNetwork := range a.vocdoniFaucet.Network() {
-		if faucet.VocdoniSupportedFaucetNetworksMap[faucetNetwork] != network {
-			return fmt.Errorf("unavailable network")
+		if faucet.VocdoniSupportedFaucetNetworksMap[faucetNetwork] == network {
+			networkFound = true
 		}
+	}
+	if !networkFound {
+		return fmt.Errorf("unavailable network")
 	}
 	fpackage, err := a.vocdoniFaucet.GenerateFaucetPackage(from)
 	if err != nil {
