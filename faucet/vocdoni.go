@@ -17,6 +17,7 @@ var (
 	azeno = vocdoniSpecs{network: "azeno", networkID: "azeno"}
 	stage = vocdoniSpecs{network: "stage", networkID: "stage"}
 	dev   = vocdoniSpecs{network: "dev", networkID: "dev"}
+	lts   = vocdoniSpecs{network: "lts", networkID: "lts"}
 )
 
 // vocdoniSpecs defines a set of Vocdoni blockchain network specifications
@@ -34,6 +35,8 @@ func vocdoniSpecsFor(name string) (*vocdoniSpecs, error) {
 		return &stage, nil
 	case "dev":
 		return &dev, nil
+	case "lts":
+		return &lts, nil
 	default:
 		return nil, ErrInvalidNetwork
 	}
