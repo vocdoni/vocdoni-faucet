@@ -32,6 +32,9 @@ const (
 	FaucetNetworksGnosisChain
 	// FaucetNetworksEVMTest represents the simulated local evm network
 	FaucetNetworksEVMTest
+
+	FaucetNetworksVocdoniLTS
+	FaucetNetworksVocdoniProd
 )
 
 var (
@@ -65,6 +68,8 @@ var (
 		"dev":       FaucetNetworksVocdoniDev,
 		"stage":     FaucetNetworksVocdoniStage,
 		"azeno":     FaucetNetworksVocdoniAzeno,
+		"lts":       FaucetNetworksVocdoniLTS,
+		"prod":      FaucetNetworksVocdoniLTS,
 	}
 )
 

@@ -37,6 +37,8 @@ func vocdoniSpecsFor(name string) (*vocdoniSpecs, error) {
 		return &dev, nil
 	case "lts":
 		return &lts, nil
+	case "prod":
+		return &lts, nil
 	default:
 		return nil, ErrInvalidNetwork
 	}
